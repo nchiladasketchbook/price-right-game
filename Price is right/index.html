@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Price is Right Market Research Survey</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .game-header {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .round-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .timer {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #e74c3c;
+            background: #f8f9fa;
+            padding: 10px 20px;
+            border-radius: 25px;
+        }
+        
+        .score {
+            font-size: 1.2em;
+            font-weight: bold;
+            background: #27ae60;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+        }
+        
+        .products-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .product-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+        
+        .product-card.current {
+            border: 3px solid #4CAF50;
+        }
+        
+        .product-card.finale {
+            border: 3px solid #FFD700;
+            background: linear-gradient(135deg, #fff9c4 0%, white 100%);
+        }
+        
+        .product-image {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+        
+        .product-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        .product-price {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #27ae60;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+        
+        .voting-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin: 25px 0;
+        }
+        
+        .vote-button {
+            padding: 15px 30px;
+            font-size: 1.1em;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 140px;
+        }
+        
+        .vote-button.higher {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .vote-button.lower {
+            background: #f44336;
+            color: white;
+        }
+        
+        .vote-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .vote-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .waiting-message {
+            text-align: center;
+            font-size: 1.1em;
+            color: #333;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .voting-results {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .vote-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: bold;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9em;
+        }
+        
+        .vote-indicator.higher {
+            color: #4CAF50;
+        }
+        
+        .vote-indicator.lower {
+            color: #f44336;
+        }
+        
+        .players-section {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .players-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        
+        .player {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            position: relative;
+        }
+        
+        .player.current-user {
+            background: #e8f5e8;
+            border: 2px solid #4CAF50;
+        }
+        
+        .player.voted {
+            background: #e3f2fd;
+            border: 2px solid #2196F3;
+        }
+        
+        .player.bot {
+            background: #fafafa;
+            border: 2px solid #999;
+        }
+        
+        .player-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .player-score {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #2196F3;
+        }
+        
+        .player-status {
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .results-container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .entry-form {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 1em;
+            margin-bottom: 15px;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #2196F3;
+        }
+        
+        .form-button {
+            width: 100%;
+            padding: 15px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .form-button:hover {
+            background: #1976D2;
+        }
+        
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            z-index: 1000;
+        }
+        
+        .connection-status.connected {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .connection-status.disconnected {
+            background: #f44336;
+            color: white;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            .products-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .round-info {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .voting-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="connectionStatus" class="connection-status connected">🟢 Connected</div>
+    <div id="root"></div>
+
+    <script>
+        const API_BASE = '/.netlify/functions/api';
+        
+        // Game state
+        let gameState = 'entry';
+        let gameId = null;
+        let playerId = null;
+        let playerName = '';
+        let panelId = '';
+        let returnUrl = '';
+        let gameData = null;
+        let currentPlayer = null;
+        let updateInterval = null;
+        let connectionStatus = 'connected';
+
+        // Initialize game
+        function initializeGame() {
+            const urlParams = new URLSearchParams(window.location.search);
+            panelId = urlParams.get('panel') || urlParams.get('panelId') || '';
+            returnUrl = urlParams.get('return') || urlParams.get('returnUrl') || '';
+            const autoStartParam = urlParams.get('autostart');
+            
+            if (returnUrl) {
+                returnUrl = decodeURIComponent(returnUrl);
+            }
+
+            if (autoStartParam === 'true') {
+                playerName = 'Participant';
+                setTimeout(() => joinGame('Participant'), 1000);
+            }
+            
+            render();
+        }
+
+        // API calls
+        async function apiCall(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                updateConnectionStatus('connected');
+                return await response.json();
+            } catch (error) {
+                console.error('API Error:', error);
+                updateConnectionStatus('disconnected');
+                throw error;
+            }
+        }
+
+        function updateConnectionStatus(status) {
+            connectionStatus = status;
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.className = `connection-status ${status}`;
+            statusEl.textContent = status === 'connected' ? '🟢 Connected' : '🔴 Disconnected';
+        }
+
+        // Game functions
+        async function joinGame(name = null) {
+            const participantName = name || playerName;
+            if (!participantName.trim()) {
+                alert('Please enter your name');
+                return;
+            }
+            
+            try {
+                const result = await apiCall('/game/join', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        playerName: participantName.trim(),
+                        panelId: panelId
+                    })
+                });
+                
+                gameId = result.gameId;
+                playerId = result.playerId;
+                gameState = 'lobby';
+                
+                // Start polling for game updates
+                startGameUpdates();
+                render();
+            } catch (error) {
+                alert('Failed to join game. Please try again.');
+            }
+        }
+
+        function startGameUpdates() {
+            updateInterval = setInterval(async () => {
+                if (!gameId) return;
+                
+                try {
+                    const status = await apiCall(`/game/status?gameId=${gameId}`);
+                    gameData = status;
+                    
+                    // Find current player
+                    currentPlayer = status.players.find(p => p.id === playerId);
+                    
+                    // Update game state based on server state
+                    if (status.status === 'lobby' && gameState !== 'lobby') {
+                        gameState = 'lobby';
+                    } else if (status.status === 'playing' && gameState !== 'game') {
+                        gameState = 'game';
+                    } else if (status.status === 'completed' && gameState !== 'results') {
+                        gameState = 'results';
+                        clearInterval(updateInterval);
+                    }
+                    
+                    render();
+                } catch (error) {
+                    console.error('Failed to update game status:', error);
+                }
+            }, 1000);
+        }
+
+        async function makeGuess(guess) {
+            if (!gameId || !playerId) return;
+            
+            try {
+                await apiCall('/game/guess', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        gameId,
+                        playerId,
+                        guess
+                    })
+                });
+                
+                // Update local player state immediately for better UX
+                if (currentPlayer) {
+                    currentPlayer.guess = guess;
+                }
+                render();
+            } catch (error) {
+                alert('Failed to submit guess. Please try again.');
+            }
+        }
+
+        function returnToSource() {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+            
+            if (returnUrl) {
+                const url = new URL(returnUrl);
+                if (panelId) url.searchParams.set('panel', panelId);
+                url.searchParams.set('completed', 'true');
+                url.searchParams.set('score', currentPlayer?.score || 0);
+                url.searchParams.set('rounds', gameData?.current_round || 0);
+                
+                window.location.href = url.toString();
+            } else {
+                alert(`Game Complete! Final Score: ${currentPlayer?.score || 0}`);
+                window.location.reload();
+            }
+        }
+
+        function render() {
+            const root = document.getElementById('root');
+            
+            if (gameState === 'entry') {
+                root.innerHTML = `
+                    <div class="container">
+                        <div style="text-align: center; margin-bottom: 30px;">
+                            <h1 style="font-size: 3em; color: white; margin-bottom: 10px;">🎯 Price is Right</h1>
+                            <p style="font-size: 1.2em; color: rgba(255,255,255,0.9);">Market Research Game</p>
+                        </div>
+                        
+                        ${(panelId || returnUrl) ? `
+                            <div style="background: rgba(255, 255, 255, 0.2); color: white; padding: 10px; border-radius: 8px; margin-bottom: 15px; text-align: center; font-size: 0.9em;">
+                                ${panelId ? `<div>Panel ID: ${panelId}</div>` : ''}
+                                ${returnUrl ? `<div>✓ Connected to Survey</div>` : ''}
+                            </div>
+                        ` : ''}
+                        
+                        <div class="entry-form">
+                            <h2 style="text-align: center; margin-bottom: 20px;">Welcome!</h2>
+                            <input type="text" id="playerNameInput" class="form-input" placeholder="Enter your name" onkeypress="if(event.key==='Enter') joinGameFromInput()">
+                            <button onclick="joinGameFromInput()" class="form-button">Join Game</button>
+                        </div>
+                    </div>
+                `;
+            } else if (gameState === 'lobby') {
+                const lobbyTimer = gameData ? Math.max(0, 20 - Math.floor((Date.now() - new Date(gameData.created_at)) / 1000)) : 20;
+                const players = gameData?.players || [];
+                
+                root.innerHTML = `
+                    <div class="container">
+                        <div class="game-header">
+                            <h2 style="font-size: 2em; margin-bottom: 15px;">🎮 Game Lobby</h2>
+                            <p style="font-size: 1.2em; color: #666;">
+                                🕐 ${gameData?.status === 'playing' ? 'Starting now!' : `Starting in ${lobbyTimer} seconds`}
+                            </p>
+                            <p style="font-size: 1em; color: #666; margin-top: 10px;">
+                                Waiting for more players... (${players.filter(p => !p.isBot).length}/4 real players)
+                            </p>
+                            <div style="width: 100%; height: 8px; background: #f0f0f0; border-radius: 4px; margin-top: 20px; overflow: hidden;">
+                                <div style="width: ${((20 - lobbyTimer) / 20) * 100}%; height: 100%; background: #4CAF50; transition: width 1s ease;"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="players-section">
+                            <h3 style="margin-bottom: 20px; text-align: center;">Players in Lobby</h3>
+                            <div class="players-grid">
+                                ${players.map(player => `
+                                    <div class="player ${player.id === playerId ? 'current-user' : ''} ${player.isBot ? 'bot' : ''}">
+                                        <div style="font-size: 2em; margin-bottom: 10px;">
+                                            ${player.isBot ? '🤖' : player.id === playerId ? '👤 (You)' : '👤'}
+                                        </div>
+                                        <div class="player-name">${player.name}</div>
+                                        <div class="player-status">
+                                            ${player.isBot ? 'Bot' : 'Real Player'}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                                ${Array.from({length: Math.max(0, 4 - players.length)}, (_, i) => `
+                                    <div class="player" style="opacity: 0.5; border: 2px dashed #ccc;">
+                                        <div style="font-size: 2em; margin-bottom: 10px;">⏳</div>
+                                        <div class="player-name">Waiting...</div>
+                                        <div class="player-status">Empty slot</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (gameState === 'game') {
+                if (!gameData || !gameData.products) {
+                    root.innerHTML = '<div class="container"><div class="game-header"><h2>Loading game...</h2></div></div>';
+                    return;
+                }
+                
+                const currentRound = gameData.current_round;
+                const products = gameData.products;
+                const finaleProduct = gameData.finale_product;
+                const maxRounds = products.length + (finaleProduct ? 1 : 0);
+                const isFinaleRound = finaleProduct && currentRound === products.length;
+                
+                const currentProduct = currentRound < products.length ? products[currentRound] : finaleProduct;
+                const previousProduct = currentRound > 0 ? (currentRound <= products.length ? products[currentRound - 1] : products[products.length - 1]) : null;
+                
+                const players = gameData.players || [];
+                const realPlayers = players.filter(p => !p.isBot);
+                const votedPlayers = realPlayers.filter(p => p.guess);
+                
+                const playerGuess = currentPlayer?.guess;
+                const allRealPlayersVoted = votedPlayers.length === realPlayers.length;
+                
+                root.innerHTML = `
+                    <div class="container">
+                        <div class="game-header">
+                            <div class="round-info">
+                                <h2>Round ${currentRound + 1} of ${maxRounds}${isFinaleRound ? ' <span style="color: #FFD700;">⭐ FINALE</span>' : ''}</h2>
+                                <div class="timer">⏰ ${gameData.round_timer || 10}s</div>
+                                <div class="score">🏆 ${currentPlayer?.score || 0}</div>
+                            </div>
+                        </div>
+
+                        <div class="products-grid">
+                            ${previousProduct ? `
+                                <div class="product-card">
+                                    <h3 style="margin-bottom: 15px;">Previous Product</h3>
+                                    <div class="product-image">${previousProduct.image}</div>
+                                    <div class="product-name">${previousProduct.name}</div>
+                                    <div class="product-price">$${previousProduct.price}</div>
+                                </div>
+                            ` : ''}
+
+                            <div class="product-card current ${isFinaleRound ? 'finale' : ''}">
+                                <h3 style="margin-bottom: 15px;">Current Product ${isFinaleRound ? '⭐' : ''}</h3>
+                                <div class="product-image">${currentProduct?.image}</div>
+                                <div class="product-name">${currentProduct?.name}</div>
+                                ${currentRound === 0 ? `<div class="product-price">$${currentProduct?.price}</div>` : ''}
+                            </div>
+                        </div>
+
+                        ${currentRound > 0 ? `
+                            <div>
+                                ${!playerGuess ? `
+                                    <p style="text-align: center; font-size: 1.2em; margin-bottom: 20px;">
+                                        Is this price <strong>higher</strong> or <strong>lower</strong> than the previous product?
+                                    </p>
+                                    <div class="voting-buttons">
+                                        <button onclick="makeGuess('higher')" class="vote-button higher">↑ Higher</button>
+                                        <button onclick="makeGuess('lower')" class="vote-button lower">↓ Lower</button>
+                                    </div>
+                                ` : `
+                                    <div class="waiting-message">
+                                        <div style="font-size: 1.5em; margin-bottom: 10px;">
+                                            ${playerGuess === 'higher' ? '↑' : '↓'} You guessed: <strong>${playerGuess}</strong>
+                                        </div>
+                                        <p>Waiting for other players... (${votedPlayers.length}/${realPlayers.length} voted)</p>
+                                        ${allRealPlayersVoted ? '<p style="color: #4CAF50; font-weight: bold;">Processing results...</p>' : ''}
+                                    </div>
+                                `}
+                            </div>
+                        ` : ''}
+
+                        <div class="players-section">
+                            <h3 style="margin-bottom: 15px; text-align: center;">Current Standings</h3>
+                            <div class="players-grid">
+                                ${players.map(player => `
+                                    <div class="player ${player.id === playerId ? 'current-user' : ''} ${player.guess ? 'voted' : ''} ${player.isBot ? 'bot' : ''}">
+                                        <div class="player-name">${player.name}${player.id === playerId ? ' (You)' : ''}</div>
+                                        <div class="player-score">${player.score || 0}</div>
+                                        <div class="player-status">
+                                            ${player.isBot ? '🤖 Bot' : player.guess ? '✓ Voted' : '⏳ Voting...'}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (gameState === 'results') {
+                const players = gameData?.players || [];
+                const sortedPlayers = [...players].sort((a, b) => (b.score || 0) - (a.score || 0));
+                
+                root.innerHTML = `
+                    <div class="container">
+                        <div class="results-container">
+                            <h2 style="text-align: center; font-size: 2.2em; margin-bottom: 25px; color: #2c3e50;">🎉 Game Complete!</h2>
+                            <p style="text-align: center; margin-bottom: 30px; font-size: 1.1em; color: #666;">
+                                Thanks for participating in our market research!
+                            </p>
+
+                            <div style="margin-bottom: 30px;">
+                                <h3 style="margin-bottom: 20px;">Final Scores</h3>
+                                ${sortedPlayers.map((player, index) => `
+                                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; margin-bottom: 10px; background: ${player.id === playerId ? '#e8f5e8' : '#f8f9fa'}; border-radius: 10px; ${player.id === playerId ? 'border: 2px solid #4CAF50;' : ''}">
+                                        <div style="display: flex; align-items: center;">
+                                            <div style="width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; margin-right: 15px; background: ${index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : index === 2 ? '#CD7F32' : '#999'};">
+                                                ${index + 1}
+                                            </div>
+                                            <div>
+                                                <span style="font-weight: bold;">${player.name}${player.id === playerId ? ' (You)' : ''}</span>
+                                                <div style="font-size: 0.8em; color: #666;">${player.isBot ? '🤖 Bot' : '👤 Real Player'}</div>
+                                            </div>
+                                        </div>
+                                        <span style="font-size: 1.2em; font-weight: bold; color: #2196F3;">${player.score || 0}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+
+                            <div style="text-align: center;">
+                                <button onclick="returnToSource()" style="display: block; width: 200px; margin: 20px auto; padding: 15px; background: #2196F3; color: white; border: none; border-radius: 10px; font-size: 1.1em; font-weight: bold; cursor: pointer;">
+                                    ${returnUrl ? 'Continue to Survey' : 'Complete Game'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function joinGameFromInput() {
+            const input = document.getElementById('playerNameInput');
+            if (input) {
+                playerName = input.value;
+                joinGame();
+            }
+        }
+
+        // Make functions available globally
+        window.joinGameFromInput = joinGameFromInput;
+        window.makeGuess = makeGuess;
+        window.returnToSource = returnToSource;
+
+        // Initialize the game
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeGame();
+            console.log('🎯 Multiplayer Price is Right Game loaded!');
+        });
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', function() {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+        });
+    </script>
+</body>
+</html>
