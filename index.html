@@ -124,8 +124,8 @@
             cursor: pointer;
             transition: all 0.3s ease;
             min-width: 140px;
-            touch-action: manipulation; /* Better mobile touch handling */
-            user-select: none; /* Prevent text selection */
+            touch-action: manipulation;
+            user-select: none;
         }
         
         .vote-button.higher {
@@ -412,7 +412,6 @@
             // Update immediately
             if (gameData) {
                 gameData.round_timer = duration;
-                render();
             }
             
             localTimer = setInterval(() => {
@@ -421,7 +420,12 @@
                 
                 if (gameData) {
                     gameData.round_timer = remaining;
-                    render();
+                    
+                    // Only update the timer element if we can find it
+                    const timerEl = document.querySelector('.timer');
+                    if (timerEl) {
+                        timerEl.textContent = `⏰ ${remaining}s`;
+                    }
                 }
                 
                 if (remaining <= 0) {
@@ -429,13 +433,14 @@
                     clearInterval(localTimer);
                     localTimer = null;
                 }
-            }, 100);
+            }, 500); // Update every 500ms - smooth but not too aggressive
         }
 
         function stopLocalTimer() {
             if (localTimer) {
                 clearInterval(localTimer);
                 localTimer = null;
+                roundStartTime = null;
             }
         }
 
@@ -486,33 +491,64 @@
                     if (status.status === 'lobby' && gameState !== 'lobby') {
                         gameState = 'lobby';
                         stopLocalTimer();
+                        render();
                     } else if (status.status === 'playing' && gameState !== 'game') {
                         gameState = 'game';
                         console.log('🎯 Game started at round', status.current_round);
+                        render();
                     } else if (status.status === 'completed' && gameState !== 'results') {
                         gameState = 'results';
                         stopLocalTimer();
                         clearInterval(updateInterval);
+                        render();
                     }
                     
-                    // Check if we moved to a new round (only start timer for actual new rounds)
+                    // Check if we moved to a new round
                     if (gameState === 'game' && previousRound !== undefined && status.current_round > previousRound && status.current_round > 0) {
                         console.log('🔄 New round detected:', previousRound, '->', status.current_round);
                         console.log('🎯 Starting timer for new round', status.current_round);
                         startLocalTimer(10);
+                        render(); // Re-render for new round
                     }
                     
                     // If we're in a guessing round but no timer is running, start one (first time only)
                     if (gameState === 'game' && status.current_round > 0 && !localTimer) {
                         console.log('🔧 Starting timer for round', status.current_round);
                         startLocalTimer(10);
+                        render();
                     }
                     
-                    render();
+                    // Only re-render during lobby or if there are major changes
+                    if (gameState === 'lobby' || 
+                        (gameState === 'game' && (previousRound !== status.current_round || previousStatus !== status.status))) {
+                        render();
+                    } else {
+                        // Just update player scores without full re-render
+                        updatePlayerScores();
+                    }
+                    
                 } catch (error) {
                     console.error('Failed to update game status:', error);
                 }
-            }, 1000);
+            }, gameState === 'lobby' ? 1000 : 3000); // Fast polling in lobby, slower during game
+        }
+
+        // Update only player scores without full re-render
+        function updatePlayerScores() {
+            if (!gameData || gameState !== 'game') return;
+            
+            const players = gameData.players || [];
+            players.forEach(player => {
+                const playerEl = document.querySelector(`[data-player-id="${player.id}"] .player-score`);
+                if (playerEl) {
+                    playerEl.textContent = player.score || 0;
+                }
+                
+                const playerStatusEl = document.querySelector(`[data-player-id="${player.id}"] .player-status`);
+                if (playerStatusEl) {
+                    playerStatusEl.textContent = player.isBot ? '🤖 Bot' : player.guess ? '✓ Voted' : '⏳ Voting...';
+                }
+            });
         }
 
         async function makeGuess(guess) {
@@ -529,10 +565,26 @@
                 return;
             }
             
+            // Immediately disable buttons and show selection
+            const buttons = document.querySelectorAll('.vote-button');
+            buttons.forEach(btn => btn.disabled = true);
+            
+            const votingContainer = document.querySelector('.voting-buttons')?.parentElement;
+            if (votingContainer) {
+                votingContainer.innerHTML = `
+                    <div class="waiting-message">
+                        <div style="font-size: 1.5em; margin-bottom: 10px;">
+                            ${guess === 'higher' ? '↑' : '↓'} You guessed: <strong>${guess}</strong>
+                        </div>
+                        <p>Submitting vote...</p>
+                    </div>
+                `;
+            }
+            
             try {
                 console.log('📤 Submitting guess to API...');
                 
-                // Update local state immediately
+                // Update local state
                 if (currentPlayer) {
                     currentPlayer.guess = guess;
                 }
@@ -548,13 +600,30 @@
                 
                 console.log('✅ Guess submitted successfully');
                 
+                // Update the waiting message
+                if (votingContainer) {
+                    const players = gameData?.players || [];
+                    const realPlayers = players.filter(p => !p.isBot);
+                    const votedPlayers = realPlayers.filter(p => p.guess);
+                    
+                    votingContainer.innerHTML = `
+                        <div class="waiting-message">
+                            <div style="font-size: 1.5em; margin-bottom: 10px;">
+                                ${guess === 'higher' ? '↑' : '↓'} You guessed: <strong>${guess}</strong>
+                            </div>
+                            <p>Waiting for other players... (${votedPlayers.length}/${realPlayers.length} voted)</p>
+                        </div>
+                    `;
+                }
+                
             } catch (error) {
                 console.error('❌ Failed to submit guess:', error);
-                // Revert local state on error
+                // Revert on error
                 if (currentPlayer) {
                     delete currentPlayer.guess;
                 }
                 alert('Failed to submit guess. Please try again.');
+                render(); // Re-render to restore buttons
             }
         }
 
@@ -733,7 +802,7 @@
                             <h3 style="margin-bottom: 15px; text-align: center;">Current Standings</h3>
                             <div class="players-grid">
                                 ${players.map(player => `
-                                    <div class="player ${player.id === playerId ? 'current-user' : ''} ${player.guess ? 'voted' : ''} ${player.isBot ? 'bot' : ''}">
+                                    <div class="player ${player.id === playerId ? 'current-user' : ''} ${player.guess ? 'voted' : ''} ${player.isBot ? 'bot' : ''}" data-player-id="${player.id}">
                                         <div class="player-name">${player.name}${player.id === playerId ? ' (You)' : ''}</div>
                                         <div class="player-score">${player.score || 0}</div>
                                         <div class="player-status">
