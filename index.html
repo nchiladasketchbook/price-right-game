@@ -487,11 +487,8 @@
                         stopLocalTimer();
                     } else if (status.status === 'playing' && gameState !== 'game') {
                         gameState = 'game';
-                        // Start timer when entering game for first time
-                        if (status.current_round > 0) {
-                            console.log('🎯 Game started - starting timer for round', status.current_round);
-                            startLocalTimer(10);
-                        }
+                        // Don't start timer immediately - wait for round 1
+                        console.log('🎯 Game started at round', status.current_round);
                     } else if (status.status === 'completed' && gameState !== 'results') {
                         gameState = 'results';
                         stopLocalTimer();
@@ -500,27 +497,27 @@
                     
                     // Check if game just started (lobby -> playing transition)
                     if (previousStatus === 'lobby' && status.status === 'playing') {
-                        console.log('🚀 Game transition: lobby -> playing');
+                        console.log('🚀 Game transition: lobby -> playing at round', status.current_round);
                         gameState = 'game';
-                        if (status.current_round > 0) {
-                            console.log('🎯 Starting timer for round', status.current_round);
-                            startLocalTimer(10);
-                        }
                     }
                     
                     // Check if we moved to a new round
                     if (gameState === 'game' && previousRound !== undefined && status.current_round !== previousRound) {
-                        console.log('🔄 New round detected:', previousRound, '->', status.current_round);
-                        // New round started, restart timer
+                        console.log('🔄 Round change detected:', previousRound, '->', status.current_round);
+                        
+                        // Start timer when we reach round 1 or higher (when guessing begins)
                         if (status.current_round > 0) {
-                            console.log('🎯 Starting timer for new round', status.current_round);
+                            console.log('🎯 Starting timer for round', status.current_round);
                             startLocalTimer(10);
+                        } else {
+                            console.log('⏳ Round 0 - no timer needed (showing first product)');
+                            stopLocalTimer();
                         }
                     }
                     
-                    // If we're in game state but no local timer is running, start one
+                    // If we're in a guessing round but no timer is running, start one
                     if (gameState === 'game' && status.current_round > 0 && !localTimer) {
-                        console.log('🔧 No timer running - starting timer for round', status.current_round);
+                        console.log('🔧 Round', status.current_round, '- no timer running, starting timer');
                         startLocalTimer(status.round_timer || 10);
                     }
                     

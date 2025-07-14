@@ -417,8 +417,7 @@ async function fillWithBotsAndStart(gameId) {
         products: shuffledProducts,
         finale_product: finaleProducts[0] || null,
         current_round: 0,
-        round_timer: 10,
-        round_start_time: new Date().toISOString()
+        round_timer: 10
       })
       .eq('id', gameId)
       .eq('status', 'lobby'); // Only update if still in lobby to avoid race conditions
@@ -427,6 +426,18 @@ async function fillWithBotsAndStart(gameId) {
       console.error('❌ Error starting game:', updateError);
     } else {
       console.log(`🎉 Game ${gameId} started successfully with ${players.length} players and ${shuffledProducts.length} products`);
+      
+      // Auto-advance to round 1 after 5 seconds (skip the "show first product" phase)
+      setTimeout(async () => {
+        console.log(`⏭️ Auto-advancing game ${gameId} to round 1`);
+        await supabase
+          .from('games')
+          .update({
+            current_round: 1,
+            round_timer: 10
+          })
+          .eq('id', gameId);
+      }, 5000);
     }
   } catch (error) {
     console.error('💥 Unexpected error in fillWithBotsAndStart:', error);
@@ -547,14 +558,22 @@ async function processRound(gameId, players, game) {
   } else {
     // Next round - add delay before starting next round
     setTimeout(async () => {
+      const updateData = {
+        players,
+        current_round: nextRound,
+        round_timer: 10
+      };
+      
+      // Add round_start_time only if the column exists
+      try {
+        updateData.round_start_time = new Date().toISOString();
+      } catch (e) {
+        // Column doesn't exist, skip it
+      }
+      
       await supabase
         .from('games')
-        .update({
-          players,
-          current_round: nextRound,
-          round_timer: 10,
-          round_start_time: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', gameId);
     }, 3000); // 3 second delay between rounds
     
@@ -632,10 +651,19 @@ async function getGameStatus(gameId) {
   }
   
   // Calculate remaining time for current round
-  if (data.status === 'playing' && data.round_start_time && data.current_round > 0) {
-    const roundStartTime = new Date(data.round_start_time);
-    const elapsed = Math.floor((Date.now() - roundStartTime) / 1000);
-    const remaining = Math.max(0, 10 - elapsed);
+  if (data.status === 'playing' && data.current_round > 0) {
+    // Use round_start_time if available, otherwise use a default timer
+    let remaining = 10;
+    
+    if (data.round_start_time) {
+      const roundStartTime = new Date(data.round_start_time);
+      const elapsed = Math.floor((Date.now() - roundStartTime) / 1000);
+      remaining = Math.max(0, 10 - elapsed);
+    } else {
+      // Fallback: use existing round_timer or default
+      remaining = data.round_timer || 10;
+    }
+    
     data.round_timer = remaining;
     
     // Auto-process round if time is up and not all players have voted
