@@ -399,8 +399,19 @@
 
         // Timer functions
         function startLocalTimer(duration = 10) {
-            if (localTimer) clearInterval(localTimer);
+            console.log(`⏰ Starting local timer for ${duration} seconds`);
+            if (localTimer) {
+                console.log('🔄 Clearing existing timer');
+                clearInterval(localTimer);
+            }
+            
             roundStartTime = Date.now();
+            
+            // Update immediately
+            if (gameData) {
+                gameData.round_timer = duration;
+                render();
+            }
             
             localTimer = setInterval(() => {
                 const elapsed = Math.floor((Date.now() - roundStartTime) / 1000);
@@ -412,7 +423,9 @@
                 }
                 
                 if (remaining <= 0) {
+                    console.log('⏰ Timer reached zero');
                     clearInterval(localTimer);
+                    localTimer = null;
                 }
             }, 100);
         }
@@ -461,6 +474,7 @@
                     const status = await apiCall(`/game/status?gameId=${gameId}`);
                     const previousState = gameState;
                     const previousRound = gameData?.current_round;
+                    const previousStatus = gameData?.status;
                     
                     gameData = status;
                     
@@ -473,8 +487,9 @@
                         stopLocalTimer();
                     } else if (status.status === 'playing' && gameState !== 'game') {
                         gameState = 'game';
-                        // Start timer when entering game
+                        // Start timer when entering game for first time
                         if (status.current_round > 0) {
+                            console.log('🎯 Game started - starting timer for round', status.current_round);
                             startLocalTimer(10);
                         }
                     } else if (status.status === 'completed' && gameState !== 'results') {
@@ -483,12 +498,30 @@
                         clearInterval(updateInterval);
                     }
                     
-                    // Check if we moved to a new round
-                    if (gameState === 'game' && previousRound !== undefined && status.current_round !== previousRound) {
-                        // New round started, restart timer
+                    // Check if game just started (lobby -> playing transition)
+                    if (previousStatus === 'lobby' && status.status === 'playing') {
+                        console.log('🚀 Game transition: lobby -> playing');
+                        gameState = 'game';
                         if (status.current_round > 0) {
+                            console.log('🎯 Starting timer for round', status.current_round);
                             startLocalTimer(10);
                         }
+                    }
+                    
+                    // Check if we moved to a new round
+                    if (gameState === 'game' && previousRound !== undefined && status.current_round !== previousRound) {
+                        console.log('🔄 New round detected:', previousRound, '->', status.current_round);
+                        // New round started, restart timer
+                        if (status.current_round > 0) {
+                            console.log('🎯 Starting timer for new round', status.current_round);
+                            startLocalTimer(10);
+                        }
+                    }
+                    
+                    // If we're in game state but no local timer is running, start one
+                    if (gameState === 'game' && status.current_round > 0 && !localTimer) {
+                        console.log('🔧 No timer running - starting timer for round', status.current_round);
+                        startLocalTimer(status.round_timer || 10);
                     }
                     
                     render();
