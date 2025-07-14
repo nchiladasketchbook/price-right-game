@@ -259,63 +259,115 @@ async function getLobbyStatus(gameId) {
   
   if (error) throw error;
   
+  const lobbyTimer = Math.max(0, 20 - Math.floor((Date.now() - new Date(data.created_at)) / 1000));
+  
+  // Auto-start game if lobby timer expired and still in lobby
+  if (lobbyTimer === 0 && data.status === 'lobby') {
+    await fillWithBotsAndStart(gameId);
+    // Fetch updated game data
+    const { data: updatedData } = await supabase
+      .from('games')
+      .select('*')
+      .eq('id', gameId)
+      .single();
+    
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({
+        status: updatedData.status,
+        players: updatedData.players,
+        lobbyTimer: 0
+      })
+    };
+  }
+  
   return {
     statusCode: 200,
     headers,
     body: JSON.stringify({
       status: data.status,
       players: data.players,
-      lobbyTimer: Math.max(0, 20 - Math.floor((Date.now() - new Date(data.created_at)) / 1000))
+      lobbyTimer
     })
   };
 }
 
 async function fillWithBotsAndStart(gameId) {
-  const { data: game } = await supabase
-    .from('games')
-    .select('*')
-    .eq('id', gameId)
-    .single();
-  
-  if (!game || game.status !== 'lobby') return;
-  
-  const players = game.players || [];
-  const botNames = ['Alex', 'Sarah', 'Mike', 'Emma'];
-  
-  // Fill remaining slots with bots
-  while (players.length < 4) {
-    players.push({
-      id: Date.now() + Math.random(),
-      name: botNames[players.length - 1] || `Bot${players.length}`,
-      panelId: null,
-      isBot: true,
-      score: 0
-    });
+  try {
+    const { data: game } = await supabase
+      .from('games')
+      .select('*')
+      .eq('id', gameId)
+      .single();
+    
+    if (!game || game.status !== 'lobby') {
+      console.log(`Game ${gameId} not found or not in lobby state`);
+      return;
+    }
+    
+    const players = [...(game.players || [])]; // Create a copy
+    const botNames = ['Alex', 'Sarah', 'Mike', 'Emma'];
+    
+    // Fill remaining slots with bots
+    while (players.length < 4) {
+      players.push({
+        id: Date.now() + Math.random() * 1000 + players.length,
+        name: botNames[players.length - 1] || `Bot${players.length}`,
+        panelId: null,
+        isBot: true,
+        score: 0
+      });
+    }
+    
+    // Get products for the game
+    const { data: products, error: productsError } = await supabase
+      .from('products')
+      .select('*');
+    
+    if (productsError) {
+      console.error('Error fetching products:', productsError);
+      return;
+    }
+    
+    if (!products || products.length === 0) {
+      console.error('No products found for game');
+      return;
+    }
+    
+    const regularProducts = products.filter(p => !p.is_finale);
+    const finaleProducts = products.filter(p => p.is_finale);
+    
+    if (regularProducts.length === 0) {
+      console.error('No regular products found');
+      return;
+    }
+    
+    // Shuffle products
+    const shuffledProducts = regularProducts.sort(() => Math.random() - 0.5);
+    
+    const { error: updateError } = await supabase
+      .from('games')
+      .update({
+        status: 'playing',
+        players,
+        products: shuffledProducts,
+        finale_product: finaleProducts[0] || null,
+        current_round: 0,
+        round_timer: 10,
+        round_start_time: new Date().toISOString()
+      })
+      .eq('id', gameId)
+      .eq('status', 'lobby'); // Only update if still in lobby to avoid race conditions
+    
+    if (updateError) {
+      console.error('Error starting game:', updateError);
+    } else {
+      console.log(`Game ${gameId} started successfully with ${players.length} players`);
+    }
+  } catch (error) {
+    console.error('Error in fillWithBotsAndStart:', error);
   }
-  
-  // Get products for the game
-  const { data: products } = await supabase
-    .from('products')
-    .select('*');
-  
-  const regularProducts = products.filter(p => !p.is_finale);
-  const finaleProducts = products.filter(p => p.is_finale);
-  
-  // Shuffle products
-  const shuffledProducts = regularProducts.sort(() => Math.random() - 0.5);
-  
-  await supabase
-    .from('games')
-    .update({
-      status: 'playing',
-      players,
-      products: shuffledProducts,
-      finale_product: finaleProducts[0] || null,
-      current_round: 0,
-      round_timer: 10,
-      round_start_time: new Date().toISOString()
-    })
-    .eq('id', gameId);
 }
 
 async function startGame(body) {
@@ -462,6 +514,33 @@ async function getGameStatus(gameId) {
     .single();
   
   if (error) throw error;
+  
+  // Handle lobby timer expiration
+  if (data.status === 'lobby') {
+    const lobbyTimer = Math.max(0, 20 - Math.floor((Date.now() - new Date(data.created_at)) / 1000));
+    
+    if (lobbyTimer === 0) {
+      // Auto-start the game
+      await fillWithBotsAndStart(gameId);
+      // Fetch updated game data
+      const { data: updatedData } = await supabase
+        .from('games')
+        .select('*')
+        .eq('id', gameId)
+        .single();
+      
+      if (updatedData) {
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify(updatedData)
+        };
+      }
+    }
+    
+    // Add lobby timer to response
+    data.lobbyTimer = lobbyTimer;
+  }
   
   // Calculate remaining time for current round
   if (data.status === 'playing' && data.round_start_time && data.current_round > 0) {
