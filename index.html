@@ -476,6 +476,13 @@
                     const previousRound = gameData?.current_round;
                     const previousStatus = gameData?.status;
                     
+                    // Only update if there are actual changes
+                    const hasChanges = !gameData || 
+                        gameData.status !== status.status ||
+                        gameData.current_round !== status.current_round ||
+                        gameData.players?.length !== status.players?.length ||
+                        JSON.stringify(gameData.players) !== JSON.stringify(status.players);
+                    
                     gameData = status;
                     
                     // Find current player
@@ -485,20 +492,23 @@
                     if (status.status === 'lobby' && gameState !== 'lobby') {
                         gameState = 'lobby';
                         stopLocalTimer();
+                        render();
                     } else if (status.status === 'playing' && gameState !== 'game') {
                         gameState = 'game';
-                        // Don't start timer immediately - wait for round 1
                         console.log('🎯 Game started at round', status.current_round);
+                        render();
                     } else if (status.status === 'completed' && gameState !== 'results') {
                         gameState = 'results';
                         stopLocalTimer();
                         clearInterval(updateInterval);
+                        render();
                     }
                     
                     // Check if game just started (lobby -> playing transition)
                     if (previousStatus === 'lobby' && status.status === 'playing') {
                         console.log('🚀 Game transition: lobby -> playing at round', status.current_round);
                         gameState = 'game';
+                        render();
                     }
                     
                     // Check if we moved to a new round
@@ -513,6 +523,7 @@
                             console.log('🎯 Starting timer for round', status.current_round);
                             startLocalTimer(10);
                         }
+                        render();
                     }
                     
                     // If we're in a guessing round but no timer is running, start one (only once)
@@ -521,11 +532,15 @@
                         startLocalTimer(status.round_timer);
                     }
                     
-                    render();
+                    // Only re-render if there were significant changes
+                    if (hasChanges) {
+                        render();
+                    }
+                    
                 } catch (error) {
                     console.error('Failed to update game status:', error);
                 }
-            }, 1000);
+            }, 2000); // Reduced polling frequency to every 2 seconds
         }
 
         async function makeGuess(guess) {
@@ -534,6 +549,21 @@
             if (!gameId || !playerId) {
                 console.error('❌ Cannot make guess - missing gameId or playerId');
                 return;
+            }
+
+            // Prevent multiple rapid clicks
+            if (currentPlayer?.guess) {
+                console.log('⚠️ Guess already made:', currentPlayer.guess);
+                return;
+            }
+            
+            // Immediately update UI to prevent double-clicks
+            if (currentPlayer) {
+                currentPlayer.guess = guess;
+                console.log('🔄 Updated local player state immediately');
+                
+                // Update just the voting section without full re-render
+                updateVotingSection();
             }
             
             try {
@@ -549,15 +579,51 @@
                 
                 console.log('✅ Guess submitted successfully');
                 
-                // Update local player state immediately for better UX
-                if (currentPlayer) {
-                    currentPlayer.guess = guess;
-                    console.log('🔄 Updated local player state');
-                }
-                render();
             } catch (error) {
                 console.error('❌ Failed to submit guess:', error);
+                // Revert local state on error
+                if (currentPlayer) {
+                    delete currentPlayer.guess;
+                    updateVotingSection();
+                }
                 alert('Failed to submit guess. Please try again.');
+            }
+        }
+
+        // Update only the voting section without full re-render
+        function updateVotingSection() {
+            const votingContainer = document.querySelector('.voting-buttons')?.parentElement;
+            if (!votingContainer || !gameData) return;
+
+            const currentRound = gameData.current_round;
+            const playerGuess = currentPlayer?.guess;
+            const players = gameData.players || [];
+            const realPlayers = players.filter(p => !p.isBot);
+            const votedPlayers = realPlayers.filter(p => p.guess);
+            const allRealPlayersVoted = votedPlayers.length === realPlayers.length;
+
+            if (currentRound > 0) {
+                if (!playerGuess) {
+                    votingContainer.innerHTML = `
+                        <p style="text-align: center; font-size: 1.2em; margin-bottom: 20px;">
+                            Is this price <strong>higher</strong> or <strong>lower</strong> than the previous product?
+                        </p>
+                        <div class="voting-buttons">
+                            <button onclick="window.makeGuess('higher')" class="vote-button higher">↑ Higher</button>
+                            <button onclick="window.makeGuess('lower')" class="vote-button lower">↓ Lower</button>
+                        </div>
+                    `;
+                } else {
+                    votingContainer.innerHTML = `
+                        <div class="waiting-message">
+                            <div style="font-size: 1.5em; margin-bottom: 10px;">
+                                ${playerGuess === 'higher' ? '↑' : '↓'} You guessed: <strong>${playerGuess}</strong>
+                            </div>
+                            <p>Waiting for other players... (${votedPlayers.length}/${realPlayers.length} voted)</p>
+                            ${allRealPlayersVoted ? '<p style="color: #4CAF50; font-weight: bold;">Processing results...</p>' : ''}
+                        </div>
+                    `;
+                }
             }
         }
 
