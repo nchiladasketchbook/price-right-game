@@ -505,20 +505,20 @@
                     if (gameState === 'game' && previousRound !== undefined && status.current_round !== previousRound) {
                         console.log('🔄 Round change detected:', previousRound, '->', status.current_round);
                         
-                        // Start timer when we reach round 1 or higher (when guessing begins)
-                        if (status.current_round > 0) {
+                        // Only restart timer if we actually moved to a higher round
+                        if (status.current_round > previousRound && status.current_round > 0) {
+                            console.log('🎯 Starting timer for new round', status.current_round);
+                            startLocalTimer(10);
+                        } else if (status.current_round > 0 && !localTimer) {
                             console.log('🎯 Starting timer for round', status.current_round);
                             startLocalTimer(10);
-                        } else {
-                            console.log('⏳ Round 0 - no timer needed (showing first product)');
-                            stopLocalTimer();
                         }
                     }
                     
-                    // If we're in a guessing round but no timer is running, start one
-                    if (gameState === 'game' && status.current_round > 0 && !localTimer) {
-                        console.log('🔧 Round', status.current_round, '- no timer running, starting timer');
-                        startLocalTimer(status.round_timer || 10);
+                    // If we're in a guessing round but no timer is running, start one (only once)
+                    if (gameState === 'game' && status.current_round > 0 && !localTimer && status.round_timer > 0) {
+                        console.log('🔧 Round', status.current_round, '- no timer running, starting timer with', status.round_timer, 'seconds');
+                        startLocalTimer(status.round_timer);
                     }
                     
                     render();
@@ -529,9 +529,15 @@
         }
 
         async function makeGuess(guess) {
-            if (!gameId || !playerId) return;
+            console.log('🎯 makeGuess called with:', guess);
+            
+            if (!gameId || !playerId) {
+                console.error('❌ Cannot make guess - missing gameId or playerId');
+                return;
+            }
             
             try {
+                console.log('📤 Submitting guess to API...');
                 await apiCall('/game/guess', {
                     method: 'POST',
                     body: JSON.stringify({
@@ -541,12 +547,16 @@
                     })
                 });
                 
+                console.log('✅ Guess submitted successfully');
+                
                 // Update local player state immediately for better UX
                 if (currentPlayer) {
                     currentPlayer.guess = guess;
+                    console.log('🔄 Updated local player state');
                 }
                 render();
             } catch (error) {
+                console.error('❌ Failed to submit guess:', error);
                 alert('Failed to submit guess. Please try again.');
             }
         }
@@ -700,8 +710,8 @@
                                         Is this price <strong>higher</strong> or <strong>lower</strong> than the previous product?
                                     </p>
                                     <div class="voting-buttons">
-                                        <button onclick="makeGuess('higher')" class="vote-button higher">↑ Higher</button>
-                                        <button onclick="makeGuess('lower')" class="vote-button lower">↓ Lower</button>
+                                        <button onclick="window.makeGuess('higher')" class="vote-button higher">↑ Higher</button>
+                                        <button onclick="window.makeGuess('lower')" class="vote-button lower">↓ Lower</button>
                                     </div>
                                 ` : `
                                     <div class="waiting-message">
@@ -713,7 +723,14 @@
                                     </div>
                                 `}
                             </div>
-                        ` : ''}
+                        ` : `
+                            <div class="waiting-message">
+                                <div style="font-size: 1.2em; margin-bottom: 10px;">
+                                    📋 <strong>Round ${currentRound + 1}</strong>
+                                </div>
+                                <p>Get ready for the first comparison...</p>
+                            </div>
+                        `}
 
                         <div class="players-section">
                             <h3 style="margin-bottom: 15px; text-align: center;">Current Standings</h3>
