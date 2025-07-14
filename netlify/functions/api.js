@@ -528,7 +528,7 @@ async function processRound(gameId, players, game) {
   if (currentRound > 0 && previousProduct && currentProduct) {
     const isHigher = currentProduct.price > previousProduct.price;
     
-    // Score players and store their responses
+    // Score players and store responses for real players only
     players.forEach(player => {
       if (player.isBot && !player.guess) {
         // Bots guess randomly with 60% accuracy
@@ -541,22 +541,24 @@ async function processRound(gameId, players, game) {
           player.score += 100;
         }
         
-        // Store the response for this round
-        if (!player.responses) {
-          player.responses = [];
+        // Store the response for this round - ONLY for real players (not bots)
+        if (!player.isBot) {
+          if (!player.responses) {
+            player.responses = [];
+          }
+          
+          player.responses.push({
+            round: currentRound,
+            guess: player.guess,
+            correct: correct,
+            actualHigher: isHigher,
+            currentProduct: currentProduct.name,
+            currentPrice: currentProduct.price,
+            previousProduct: previousProduct.name,
+            previousPrice: previousProduct.price,
+            responseTime: new Date().toISOString()
+          });
         }
-        
-        player.responses.push({
-          round: currentRound,
-          guess: player.guess,
-          correct: correct,
-          actualHigher: isHigher,
-          currentProduct: currentProduct.name,
-          currentPrice: currentProduct.price,
-          previousProduct: previousProduct.name,
-          previousPrice: previousProduct.price,
-          responseTime: new Date().toISOString()
-        });
       }
       
       // Clear guess for next round
@@ -746,10 +748,14 @@ async function downloadResponses() {
     
     games.forEach(game => {
       if (game.players && game.products) {
-        game.players.forEach(player => {
+        // Only process real players (not bots)
+        const realPlayers = game.players.filter(player => !player.isBot);
+        
+        realPlayers.forEach(player => {
           // Get player's responses from game rounds
           if (player.responses) {
-            player.responses.forEach((response, roundIndex) => {
+            player.responses.forEach((response, responseIndex) => {
+              const roundIndex = response.round - 1; // Convert to 0-based index
               const product = game.products[roundIndex];
               const previousProduct = roundIndex > 0 ? game.products[roundIndex - 1] : null;
               
@@ -757,17 +763,16 @@ async function downloadResponses() {
                 game_id: game.id,
                 player_id: player.id,
                 player_name: player.name,
-                is_bot: player.isBot || false,
                 panel_id: player.panelId || '',
-                round: roundIndex + 1,
-                current_product: product?.name || '',
-                current_price: product?.price || '',
-                previous_product: previousProduct?.name || '',
-                previous_price: previousProduct?.price || '',
+                round: response.round,
+                current_product: response.currentProduct,
+                current_price: response.currentPrice,
+                previous_product: response.previousProduct,
+                previous_price: response.previousPrice,
                 player_guess: response.guess,
                 correct_answer: response.correct ? 'correct' : 'incorrect',
                 actual_comparison: response.actualHigher ? 'higher' : 'lower',
-                score: player.score || 0,
+                final_score: player.score || 0,
                 game_completed_at: game.completed_at,
                 response_time: response.responseTime || ''
               });
