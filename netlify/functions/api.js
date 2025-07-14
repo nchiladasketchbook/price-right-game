@@ -292,16 +292,25 @@ async function getLobbyStatus(gameId) {
 
 async function fillWithBotsAndStart(gameId) {
   try {
-    const { data: game } = await supabase
+    console.log(`🎮 Starting fillWithBotsAndStart for game ${gameId}`);
+    
+    const { data: game, error: gameError } = await supabase
       .from('games')
       .select('*')
       .eq('id', gameId)
       .single();
     
-    if (!game || game.status !== 'lobby') {
-      console.log(`Game ${gameId} not found or not in lobby state`);
+    if (gameError) {
+      console.error('❌ Error fetching game:', gameError);
       return;
     }
+    
+    if (!game || game.status !== 'lobby') {
+      console.log(`⚠️ Game ${gameId} not found or not in lobby state. Status: ${game?.status}`);
+      return;
+    }
+    
+    console.log(`✅ Game ${gameId} found in lobby with ${game.players?.length || 0} players`);
     
     const players = [...(game.players || [])]; // Create a copy
     const botNames = ['Alex', 'Sarah', 'Mike', 'Emma'];
@@ -317,32 +326,89 @@ async function fillWithBotsAndStart(gameId) {
       });
     }
     
-    // Get products for the game
-    const { data: products, error: productsError } = await supabase
+    console.log(`🤖 Added bots. Total players: ${players.length}`);
+    
+    // Get products for the game - try with different approaches for RLS issues
+    console.log('📦 Fetching products...');
+    let products = null;
+    let productsError = null;
+    
+    // First try: Normal query
+    const { data: productsData, error: normalError } = await supabase
       .from('products')
       .select('*');
     
-    if (productsError) {
-      console.error('Error fetching products:', productsError);
-      return;
+    if (normalError) {
+      console.error('❌ Normal products query failed:', normalError);
+      productsError = normalError;
+    } else {
+      products = productsData;
+      console.log(`✅ Products fetched successfully: ${products?.length || 0} products`);
+    }
+    
+    // If products query failed or returned empty, try with service role
+    if (!products || products.length === 0) {
+      console.log('🔑 Trying products query with service role...');
+      
+      // Create service role client if we have the key
+      if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        const serviceSupabase = createClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY);
+        const { data: serviceProducts, error: serviceError } = await serviceSupabase
+          .from('products')
+          .select('*');
+        
+        if (serviceError) {
+          console.error('❌ Service role products query failed:', serviceError);
+        } else {
+          products = serviceProducts;
+          console.log(`✅ Service role products fetched: ${products?.length || 0} products`);
+        }
+      } else {
+        console.log('⚠️ No service role key available');
+      }
     }
     
     if (!products || products.length === 0) {
-      console.error('No products found for game');
-      return;
+      console.error('❌ No products found. Creating default products...');
+      
+      // Create some default products if none exist
+      const defaultProducts = [
+        { name: 'iPhone 15', price: 999, image: '📱', is_finale: false },
+        { name: 'MacBook Pro', price: 2499, image: '💻', is_finale: false },
+        { name: 'AirPods Pro', price: 249, image: '🎧', is_finale: false },
+        { name: 'Apple Watch', price: 399, image: '⌚', is_finale: true }
+      ];
+      
+      // Try to insert default products
+      const { data: insertedProducts, error: insertError } = await supabase
+        .from('products')
+        .insert(defaultProducts)
+        .select();
+      
+      if (insertError) {
+        console.error('❌ Failed to create default products:', insertError);
+        console.error('🚨 CANNOT START GAME - NO PRODUCTS AVAILABLE');
+        return;
+      } else {
+        products = insertedProducts;
+        console.log(`✅ Created ${products.length} default products`);
+      }
     }
     
     const regularProducts = products.filter(p => !p.is_finale);
     const finaleProducts = products.filter(p => p.is_finale);
     
     if (regularProducts.length === 0) {
-      console.error('No regular products found');
+      console.error('❌ No regular products found. Need at least 1 regular product to start game.');
       return;
     }
+    
+    console.log(`📊 Regular products: ${regularProducts.length}, Finale products: ${finaleProducts.length}`);
     
     // Shuffle products
     const shuffledProducts = regularProducts.sort(() => Math.random() - 0.5);
     
+    console.log('🎯 Starting game...');
     const { error: updateError } = await supabase
       .from('games')
       .update({
@@ -358,12 +424,12 @@ async function fillWithBotsAndStart(gameId) {
       .eq('status', 'lobby'); // Only update if still in lobby to avoid race conditions
     
     if (updateError) {
-      console.error('Error starting game:', updateError);
+      console.error('❌ Error starting game:', updateError);
     } else {
-      console.log(`Game ${gameId} started successfully with ${players.length} players`);
+      console.log(`🎉 Game ${gameId} started successfully with ${players.length} players and ${shuffledProducts.length} products`);
     }
   } catch (error) {
-    console.error('Error in fillWithBotsAndStart:', error);
+    console.error('💥 Unexpected error in fillWithBotsAndStart:', error);
   }
 }
 
@@ -517,36 +583,47 @@ async function getGameStatus(gameId) {
     const gameAge = Date.now() - new Date(data.created_at).getTime();
     const lobbyTimer = Math.max(0, 20 - Math.floor(gameAge / 1000));
     
+    console.log(`🕐 Game ${gameId} lobby timer: ${lobbyTimer}s (age: ${Math.floor(gameAge/1000)}s)`);
+    
     // Start game if timer expired or almost expired (within 1 second)
     if (lobbyTimer <= 1) {
-      console.log(`Starting game ${gameId} - timer: ${lobbyTimer}`);
+      console.log(`🚀 TRIGGERING GAME START for ${gameId} - timer: ${lobbyTimer}`);
+      
+      // Call fillWithBotsAndStart and wait for it
       await fillWithBotsAndStart(gameId);
       
       // Fetch updated game data with retries
       let attempts = 0;
       let updatedData = data;
       
-      while (attempts < 3 && updatedData.status === 'lobby') {
-        await new Promise(resolve => setTimeout(resolve, 200)); // Wait 200ms
-        const { data: retryData } = await supabase
+      while (attempts < 5 && updatedData.status === 'lobby') {
+        console.log(`🔄 Retry ${attempts + 1} - fetching updated game data...`);
+        await new Promise(resolve => setTimeout(resolve, 300)); // Wait 300ms
+        
+        const { data: retryData, error: retryError } = await supabase
           .from('games')
           .select('*')
           .eq('id', gameId)
           .single();
         
-        if (retryData) {
+        if (retryError) {
+          console.error(`❌ Retry ${attempts + 1} failed:`, retryError);
+        } else if (retryData) {
           updatedData = retryData;
+          console.log(`📊 Retry ${attempts + 1} - status: ${retryData.status}`);
         }
         attempts++;
       }
       
       if (updatedData && updatedData.status === 'playing') {
-        console.log(`Game ${gameId} successfully started`);
+        console.log(`✅ Game ${gameId} successfully started after ${attempts} attempts`);
         return {
           statusCode: 200,
           headers,
           body: JSON.stringify(updatedData)
         };
+      } else {
+        console.error(`❌ Game ${gameId} failed to start after ${attempts} attempts. Final status: ${updatedData?.status}`);
       }
     }
     
@@ -568,6 +645,7 @@ async function getGameStatus(gameId) {
       
       if (votedPlayers.length < realPlayers.length) {
         // Force process round with current votes
+        console.log(`⏰ Round ${data.current_round} time expired - processing with ${votedPlayers.length}/${realPlayers.length} votes`);
         setTimeout(() => processRound(gameId, data.players, data), 100);
       }
     }
