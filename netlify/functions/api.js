@@ -170,14 +170,13 @@ async function deleteProduct(id) {
 // Game functions
 async function joinGame(body) {
   const { playerName, panelId } = body;
-  const gameId = generateGameId();
   
   // Check for existing lobby
   let { data: existingGame } = await supabase
     .from('games')
     .select('*')
     .eq('status', 'lobby')
-    .gte('created_at', new Date(Date.now() - 30000).toISOString()) // Within last 30 seconds
+    .gte('created_at', new Date(Date.now() - 25000).toISOString()) // Within last 25 seconds (give 5s buffer)
     .limit(1);
   
   if (existingGame && existingGame.length > 0) {
@@ -214,6 +213,7 @@ async function joinGame(body) {
   }
   
   // Create new game
+  const gameId = generateGameId();
   const player = {
     id: Date.now(),
     name: playerName,
@@ -235,9 +235,6 @@ async function joinGame(body) {
     .select();
   
   if (error) throw error;
-  
-  // Start lobby timer
-  setTimeout(() => fillWithBotsAndStart(gameId), 20000);
   
   return {
     statusCode: 200,
@@ -517,19 +514,34 @@ async function getGameStatus(gameId) {
   
   // Handle lobby timer expiration
   if (data.status === 'lobby') {
-    const lobbyTimer = Math.max(0, 20 - Math.floor((Date.now() - new Date(data.created_at)) / 1000));
+    const gameAge = Date.now() - new Date(data.created_at).getTime();
+    const lobbyTimer = Math.max(0, 20 - Math.floor(gameAge / 1000));
     
-    if (lobbyTimer === 0) {
-      // Auto-start the game
+    // Start game if timer expired or almost expired (within 1 second)
+    if (lobbyTimer <= 1) {
+      console.log(`Starting game ${gameId} - timer: ${lobbyTimer}`);
       await fillWithBotsAndStart(gameId);
-      // Fetch updated game data
-      const { data: updatedData } = await supabase
-        .from('games')
-        .select('*')
-        .eq('id', gameId)
-        .single();
       
-      if (updatedData) {
+      // Fetch updated game data with retries
+      let attempts = 0;
+      let updatedData = data;
+      
+      while (attempts < 3 && updatedData.status === 'lobby') {
+        await new Promise(resolve => setTimeout(resolve, 200)); // Wait 200ms
+        const { data: retryData } = await supabase
+          .from('games')
+          .select('*')
+          .eq('id', gameId)
+          .single();
+        
+        if (retryData) {
+          updatedData = retryData;
+        }
+        attempts++;
+      }
+      
+      if (updatedData && updatedData.status === 'playing') {
+        console.log(`Game ${gameId} successfully started`);
         return {
           statusCode: 200,
           headers,
