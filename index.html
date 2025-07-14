@@ -344,6 +344,8 @@
         let currentPlayer = null;
         let updateInterval = null;
         let connectionStatus = 'connected';
+        let localTimer = null;
+        let roundStartTime = null;
 
         // Initialize game
         function initializeGame() {
@@ -395,6 +397,33 @@
             statusEl.textContent = status === 'connected' ? '🟢 Connected' : '🔴 Disconnected';
         }
 
+        // Timer functions
+        function startLocalTimer(duration = 10) {
+            if (localTimer) clearInterval(localTimer);
+            roundStartTime = Date.now();
+            
+            localTimer = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - roundStartTime) / 1000);
+                const remaining = Math.max(0, duration - elapsed);
+                
+                if (gameData) {
+                    gameData.round_timer = remaining;
+                    render();
+                }
+                
+                if (remaining <= 0) {
+                    clearInterval(localTimer);
+                }
+            }, 100);
+        }
+
+        function stopLocalTimer() {
+            if (localTimer) {
+                clearInterval(localTimer);
+                localTimer = null;
+            }
+        }
+
         // Game functions
         async function joinGame(name = null) {
             const participantName = name || playerName;
@@ -430,6 +459,9 @@
                 
                 try {
                     const status = await apiCall(`/game/status?gameId=${gameId}`);
+                    const previousState = gameState;
+                    const previousRound = gameData?.current_round;
+                    
                     gameData = status;
                     
                     // Find current player
@@ -438,11 +470,25 @@
                     // Update game state based on server state
                     if (status.status === 'lobby' && gameState !== 'lobby') {
                         gameState = 'lobby';
+                        stopLocalTimer();
                     } else if (status.status === 'playing' && gameState !== 'game') {
                         gameState = 'game';
+                        // Start timer when entering game
+                        if (status.current_round > 0) {
+                            startLocalTimer(10);
+                        }
                     } else if (status.status === 'completed' && gameState !== 'results') {
                         gameState = 'results';
+                        stopLocalTimer();
                         clearInterval(updateInterval);
+                    }
+                    
+                    // Check if we moved to a new round
+                    if (gameState === 'game' && previousRound !== undefined && status.current_round !== previousRound) {
+                        // New round started, restart timer
+                        if (status.current_round > 0) {
+                            startLocalTimer(10);
+                        }
                     }
                     
                     render();
@@ -476,6 +522,7 @@
         }
 
         function returnToSource() {
+            stopLocalTimer();
             if (updateInterval) {
                 clearInterval(updateInterval);
             }
@@ -585,12 +632,15 @@
                 const playerGuess = currentPlayer?.guess;
                 const allRealPlayersVoted = votedPlayers.length === realPlayers.length;
                 
+                // Use local timer if available, otherwise fallback to server timer
+                const displayTimer = gameData.round_timer || 0;
+                
                 root.innerHTML = `
                     <div class="container">
                         <div class="game-header">
                             <div class="round-info">
                                 <h2>Round ${currentRound + 1} of ${maxRounds}${isFinaleRound ? ' <span style="color: #FFD700;">⭐ FINALE</span>' : ''}</h2>
-                                <div class="timer">⏰ ${gameData.round_timer || 10}s</div>
+                                <div class="timer">⏰ ${displayTimer}s</div>
                                 <div class="score">🏆 ${currentPlayer?.score || 0}</div>
                             </div>
                         </div>
@@ -713,6 +763,7 @@
 
         // Clean up on page unload
         window.addEventListener('beforeunload', function() {
+            stopLocalTimer();
             if (updateInterval) {
                 clearInterval(updateInterval);
             }

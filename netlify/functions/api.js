@@ -312,7 +312,8 @@ async function fillWithBotsAndStart(gameId) {
       products: shuffledProducts,
       finale_product: finaleProducts[0] || null,
       current_round: 0,
-      round_timer: 10
+      round_timer: 10,
+      round_start_time: new Date().toISOString()
     })
     .eq('id', gameId);
 }
@@ -322,7 +323,10 @@ async function startGame(body) {
   
   const { data, error } = await supabase
     .from('games')
-    .update({ status: 'playing' })
+    .update({ 
+      status: 'playing',
+      round_start_time: new Date().toISOString()
+    })
     .eq('id', gameId)
     .select();
   
@@ -357,14 +361,15 @@ async function submitGuess(body) {
   const guessedPlayers = realPlayers.filter(p => p.guess);
   
   if (guessedPlayers.length === realPlayers.length) {
-    // Process round
+    // Process round immediately
     await processRound(gameId, players, game);
+  } else {
+    // Just update players
+    await supabase
+      .from('games')
+      .update({ players })
+      .eq('id', gameId);
   }
-  
-  await supabase
-    .from('games')
-    .update({ players })
-    .eq('id', gameId);
   
   return {
     statusCode: 200,
@@ -374,22 +379,36 @@ async function submitGuess(body) {
 }
 
 async function processRound(gameId, players, game) {
-  const currentProduct = game.products[game.current_round];
-  const previousProduct = game.current_round > 0 ? game.products[game.current_round - 1] : null;
+  const currentRound = game.current_round;
+  const products = game.products || [];
+  const finaleProduct = game.finale_product;
   
-  if (game.current_round > 0 && previousProduct) {
+  // Get current and previous products
+  let currentProduct, previousProduct;
+  
+  if (currentRound < products.length) {
+    currentProduct = products[currentRound];
+    previousProduct = currentRound > 0 ? products[currentRound - 1] : null;
+  } else if (finaleProduct && currentRound === products.length) {
+    currentProduct = finaleProduct;
+    previousProduct = products[products.length - 1];
+  }
+  
+  if (currentRound > 0 && previousProduct && currentProduct) {
     const isHigher = currentProduct.price > previousProduct.price;
     
     // Score players
     players.forEach(player => {
-      if (player.isBot) {
+      if (player.isBot && !player.guess) {
         // Bots guess randomly with 60% accuracy
         player.guess = Math.random() > 0.4 ? (isHigher ? 'higher' : 'lower') : (isHigher ? 'lower' : 'higher');
       }
       
-      const correct = (player.guess === 'higher' && isHigher) || (player.guess === 'lower' && !isHigher);
-      if (correct) {
-        player.score += 100;
+      if (player.guess) {
+        const correct = (player.guess === 'higher' && isHigher) || (player.guess === 'lower' && !isHigher);
+        if (correct) {
+          player.score += 100;
+        }
       }
       
       // Clear guess for next round
@@ -397,8 +416,8 @@ async function processRound(gameId, players, game) {
     });
   }
   
-  const nextRound = game.current_round + 1;
-  const maxRounds = game.products.length + (game.finale_product ? 1 : 0);
+  const nextRound = currentRound + 1;
+  const maxRounds = products.length + (finaleProduct ? 1 : 0);
   
   if (nextRound >= maxRounds) {
     // Game complete
@@ -411,13 +430,25 @@ async function processRound(gameId, players, game) {
       })
       .eq('id', gameId);
   } else {
-    // Next round
+    // Next round - add delay before starting next round
+    setTimeout(async () => {
+      await supabase
+        .from('games')
+        .update({
+          players,
+          current_round: nextRound,
+          round_timer: 10,
+          round_start_time: new Date().toISOString()
+        })
+        .eq('id', gameId);
+    }, 3000); // 3 second delay between rounds
+    
+    // Temporarily update with results visible
     await supabase
       .from('games')
       .update({
         players,
-        current_round: nextRound,
-        round_timer: 10
+        round_timer: 0 // Show results
       })
       .eq('id', gameId);
   }
@@ -431,6 +462,25 @@ async function getGameStatus(gameId) {
     .single();
   
   if (error) throw error;
+  
+  // Calculate remaining time for current round
+  if (data.status === 'playing' && data.round_start_time && data.current_round > 0) {
+    const roundStartTime = new Date(data.round_start_time);
+    const elapsed = Math.floor((Date.now() - roundStartTime) / 1000);
+    const remaining = Math.max(0, 10 - elapsed);
+    data.round_timer = remaining;
+    
+    // Auto-process round if time is up and not all players have voted
+    if (remaining === 0) {
+      const realPlayers = data.players.filter(p => !p.isBot);
+      const votedPlayers = realPlayers.filter(p => p.guess);
+      
+      if (votedPlayers.length < realPlayers.length) {
+        // Force process round with current votes
+        setTimeout(() => processRound(gameId, data.players, data), 100);
+      }
+    }
+  }
   
   return {
     statusCode: 200,
