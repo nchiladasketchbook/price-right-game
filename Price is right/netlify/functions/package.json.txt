@@ -1,5 +1,0 @@
-{
-  dependencies {
-    @supabasesupabase-js ^2.38.0
-  }
-}
