@@ -421,10 +421,12 @@
                 if (gameData) {
                     gameData.round_timer = remaining;
                     
-                    // Only update the timer element if we can find it
+                    // Only update the timer element if we can find it and we're in a countdown round
                     const timerEl = document.querySelector('.timer');
-                    if (timerEl) {
+                    if (timerEl && gameData.current_round > 0) {
                         timerEl.textContent = `⏰ ${remaining}s`;
+                    } else if (timerEl && gameData.current_round === 0) {
+                        timerEl.textContent = '🎮 Get Ready!';
                     }
                 }
                 
@@ -746,7 +748,7 @@
                         <div class="game-header">
                             <div class="round-info">
                                 <h2>Round ${currentRound + 1} of ${maxRounds}${isFinaleRound ? ' <span style="color: #FFD700;">⭐ FINALE</span>' : ''}</h2>
-                                <div class="timer">⏰ ${displayTimer}s</div>
+                                <div class="timer">${currentRound > 0 ? `⏰ ${displayTimer}s` : '🎮 Get Ready!'}</div>
                                 <div class="score">🏆 ${currentPlayer?.score || 0}</div>
                             </div>
                         </div>

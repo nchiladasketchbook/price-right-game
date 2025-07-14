@@ -224,7 +224,10 @@
         <div id="adminPanel" class="admin-panel hidden">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
                 <h2>Product Management</h2>
-                <button id="logoutButton" class="form-button danger">Logout</button>
+                <div style="display: flex; gap: 15px;">
+                    <button id="downloadButton" class="form-button success">📊 Download Responses CSV</button>
+                    <button id="logoutButton" class="form-button danger">Logout</button>
+                </div>
             </div>
 
             <!-- Add Product Form -->
@@ -303,6 +306,33 @@
             document.getElementById('adminPanel').classList.add('hidden');
             document.getElementById('adminPassword').value = '';
             document.getElementById('loginError').style.display = 'none';
+        }
+
+        // Download functionality
+        async function downloadResponses() {
+            try {
+                const response = await fetch(API_BASE + '/admin/download', {
+                    headers: { 'Authorization': 'Bearer ' + authToken }
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = 'price_right_responses.csv';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                } else {
+                    alert('Error downloading responses');
+                }
+            } catch (error) {
+                alert('Connection error. Please try again.');
+                console.error('Download error:', error);
+            }
         }
 
         // Product management
@@ -510,6 +540,12 @@
             const loginButton = document.getElementById('loginButton');
             if (loginButton) {
                 loginButton.addEventListener('click', login);
+            }
+            
+            // Download button
+            const downloadButton = document.getElementById('downloadButton');
+            if (downloadButton) {
+                downloadButton.addEventListener('click', downloadResponses);
             }
             
             // Logout button

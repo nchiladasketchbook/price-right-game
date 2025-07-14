@@ -1,4 +1,6 @@
-// netlify/functions/api.js
+function generateGameId() {
+  return Math.random().toString(36).substring(2, 15);
+}// netlify/functions/api.js
 const { createClient } = require('@supabase/supabase-js');
 
 // Initialize Supabase client
@@ -50,6 +52,9 @@ exports.handler = async (event, context) => {
         if (method === 'PUT') return updateProduct(body);
         if (method === 'DELETE') return deleteProduct(query.id);
         break;
+      
+      case '/admin/download':
+        return downloadResponses();
       
       case '/game/join':
         return joinGame(body);
@@ -523,7 +528,7 @@ async function processRound(gameId, players, game) {
   if (currentRound > 0 && previousProduct && currentProduct) {
     const isHigher = currentProduct.price > previousProduct.price;
     
-    // Score players
+    // Score players and store their responses
     players.forEach(player => {
       if (player.isBot && !player.guess) {
         // Bots guess randomly with 60% accuracy
@@ -535,6 +540,23 @@ async function processRound(gameId, players, game) {
         if (correct) {
           player.score += 100;
         }
+        
+        // Store the response for this round
+        if (!player.responses) {
+          player.responses = [];
+        }
+        
+        player.responses.push({
+          round: currentRound,
+          guess: player.guess,
+          correct: correct,
+          actualHigher: isHigher,
+          currentProduct: currentProduct.name,
+          currentPrice: currentProduct.price,
+          previousProduct: previousProduct.name,
+          previousPrice: previousProduct.price,
+          responseTime: new Date().toISOString()
+        });
       }
       
       // Clear guess for next round
@@ -708,6 +730,90 @@ async function getGameResults(gameId) {
   };
 }
 
-function generateGameId() {
-  return Math.random().toString(36).substring(2, 15);
+async function downloadResponses() {
+  try {
+    // Get all games with their player responses
+    const { data: games, error } = await supabase
+      .from('games')
+      .select('*')
+      .eq('status', 'completed')
+      .order('completed_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    // Flatten the data for CSV export
+    const csvData = [];
+    
+    games.forEach(game => {
+      if (game.players && game.products) {
+        game.players.forEach(player => {
+          // Get player's responses from game rounds
+          if (player.responses) {
+            player.responses.forEach((response, roundIndex) => {
+              const product = game.products[roundIndex];
+              const previousProduct = roundIndex > 0 ? game.products[roundIndex - 1] : null;
+              
+              csvData.push({
+                game_id: game.id,
+                player_id: player.id,
+                player_name: player.name,
+                is_bot: player.isBot || false,
+                panel_id: player.panelId || '',
+                round: roundIndex + 1,
+                current_product: product?.name || '',
+                current_price: product?.price || '',
+                previous_product: previousProduct?.name || '',
+                previous_price: previousProduct?.price || '',
+                player_guess: response.guess,
+                correct_answer: response.correct ? 'correct' : 'incorrect',
+                actual_comparison: response.actualHigher ? 'higher' : 'lower',
+                score: player.score || 0,
+                game_completed_at: game.completed_at,
+                response_time: response.responseTime || ''
+              });
+            });
+          }
+        });
+      }
+    });
+    
+    // Convert to CSV
+    if (csvData.length === 0) {
+      return {
+        statusCode: 200,
+        headers: {
+          ...headers,
+          'Content-Type': 'text/csv',
+          'Content-Disposition': 'attachment; filename="price_right_responses_empty.csv"'
+        },
+        body: 'No data available'
+      };
+    }
+    
+    const csvHeaders = Object.keys(csvData[0]).join(',');
+    const csvRows = csvData.map(row => 
+      Object.values(row).map(value => 
+        typeof value === 'string' && value.includes(',') ? `"${value}"` : value
+      ).join(',')
+    );
+    
+    const csvContent = [csvHeaders, ...csvRows].join('\n');
+    
+    return {
+      statusCode: 200,
+      headers: {
+        ...headers,
+        'Content-Type': 'text/csv',
+        'Content-Disposition': 'attachment; filename="price_right_responses.csv"'
+      },
+      body: csvContent
+    };
+  } catch (error) {
+    console.error('Error downloading responses:', error);
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ error: 'Failed to download responses' })
+    };
+  }
 }
