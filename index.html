@@ -1,63 +1,341 @@
-            <!-- Building Stage -->
-            <div id="buildingView" class="game-stage">
-                <div class="stage-header">
-                    <h2 class="stage-title">Stage 2: Product Building</h2>
-                    <p class="stage-description">Build your ideal product by dragging features to your board</p>
-                    <div id="buildingTimer" class="timer">Time remaining: 60s</div>
-                </div>
-
-                <div class="building-area">
-                    <div class="left-column">
-                        <div class="feature-pool">
-                            <h3>Available Features</h3>
-                            <div id="featuresGrid" class="features-grid">
-                                <!-- Available features will be populated here -->
-                            </div>
-                        </div>
-                        
-                        <div class="other-players">
-                            <div id="otherPlayersContainer">
-                                <!-- Other players will be populated here -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="right-column">
-                        <div class="player-board">
-                            <h3>Your Product Board</h3>
-                            <div id="playerBoard" class="board-grid">
-                                <!-- Player board slots will be populated here -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Results View -->
-            <div id="resultsView" class="results-container hidden">
-                <div style="text-align: center; margin-bottom: 30px;">
-                    <h2 style="font-size: 2.5em; margin-bottom: 15px;">🏆 Game Complete!</h2>
-                    <p style="font-size: 1.2em; color: #666;">Final Results</p>
-                </div>
-
-                <div class="leaderboard">
-                    <h3 style="text-align: center; margin-bottom: 30px;">Leaderboard</h3>
-                    <div id="leaderboardContainer">
-                        <!-- Leaderboard will be populated here -->
-                    </div>
-                </div>
-
-                <div style="text-align: center;">
-                    <button id="returnBtn" class="form-button" style="max-width: 300px;">Continue</button>
-                </div>
-            </div>
-        </div>
-    </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Price is Right Market Research Survey</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .game-header {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .round-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .timer {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #e74c3c;
+            background: #f8f9fa;
+            padding: 10px 20px;
+            border-radius: 25px;
+        }
+        
+        .score {
+            font-size: 1.2em;
+            font-weight: bold;
+            background: #27ae60;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+        }
+        
+        .products-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .product-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+        
+        .product-card.current {
+            border: 3px solid #4CAF50;
+        }
+        
+        .product-card.finale {
+            border: 3px solid #FFD700;
+            background: linear-gradient(135deg, #fff9c4 0%, white 100%);
+        }
+        
+        .product-image {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+        
+        .product-name {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        .product-price {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #27ae60;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+        
+        .voting-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin: 25px 0;
+        }
+        
+        .vote-button {
+            padding: 15px 30px;
+            font-size: 1.1em;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 140px;
+            touch-action: manipulation;
+            user-select: none;
+        }
+        
+        .vote-button.higher {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .vote-button.lower {
+            background: #f44336;
+            color: white;
+        }
+        
+        .vote-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .vote-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .waiting-message {
+            text-align: center;
+            font-size: 1.1em;
+            color: #333;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .voting-results {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .vote-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: bold;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9em;
+        }
+        
+        .vote-indicator.higher {
+            color: #4CAF50;
+        }
+        
+        .vote-indicator.lower {
+            color: #f44336;
+        }
+        
+        .players-section {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .players-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        
+        .player {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            position: relative;
+        }
+        
+        .player.current-user {
+            background: #e8f5e8;
+            border: 2px solid #4CAF50;
+        }
+        
+        .player.voted {
+            background: #e3f2fd;
+            border: 2px solid #2196F3;
+        }
+        
+        .player.bot {
+            background: #fafafa;
+            border: 2px solid #999;
+        }
+        
+        .player-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .player-score {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #2196F3;
+        }
+        
+        .player-status {
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .results-container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .entry-form {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 1em;
+            margin-bottom: 15px;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #2196F3;
+        }
+        
+        .form-button {
+            width: 100%;
+            padding: 15px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .form-button:hover {
+            background: #1976D2;
+        }
+        
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            z-index: 1000;
+        }
+        
+        .connection-status.connected {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .connection-status.disconnected {
+            background: #f44336;
+            color: white;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            .products-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .round-info {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .voting-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="connectionStatus" class="connection-status connected">🟢 Connected</div>
+    <div id="root"></div>
 
     <script>
-        const API_BASE = '/.netlify/functions/product-api';
+        const API_BASE = '/.netlify/functions/api';
         
-        // Game state variables
+        // Game state
         let gameState = 'entry';
         let gameId = null;
         let playerId = null;
@@ -68,365 +346,11 @@
         let currentPlayer = null;
         let updateInterval = null;
         let connectionStatus = 'connected';
-        let selectedOption = null;
+        let localTimer = null;
+        let roundStartTime = null;
 
-        // Cursor tracking variables
-        let cursors = new Map();
-        let lastCursorUpdate = 0;
-        let isDragging = false;
-
-        // DOM Elements helper
-        const elements = {
-            entryView: () => document.getElementById('entryView'),
-            lobbyView: () => document.getElementById('lobbyView'),
-            conjointView: () => document.getElementById('conjointView'),
-            buildingView: () => document.getElementById('buildingView'),
-            resultsView: () => document.getElementById('resultsView'),
-            resultsOverlay: () => document.getElementById('resultsOverlay'),
-            playerNameInput: () => document.getElementById('playerNameInput'),
-            joinGameBtn: () => document.getElementById('joinGameBtn'),
-            errorMessage: () => document.getElementById('errorMessage'),
-            submitChoiceBtn: () => document.getElementById('submitChoiceBtn'),
-            returnBtn: () => document.getElementById('returnBtn'),
-            continueToLeaderboard: () => document.getElementById('continueToLeaderboard')
-        };
-
-        // Initialize cursor tracking
-        function initializeCursorTracking() {
-            document.addEventListener('mousemove', (e) => {
-                if (gameState === 'building' && gameId && playerId) {
-                    const now = Date.now();
-                    
-                    if (now - lastCursorUpdate > 100) {
-                        lastCursorUpdate = now;
-                        
-                        apiCall('/game/cursor', {
-                            method: 'POST',
-                            body: JSON.stringify({
-                                gameId,
-                                playerId,
-                                x: e.clientX,
-                                y: e.clientY
-                            })
-                        }).catch(err => console.warn('Cursor update failed:', err));
-                    }
-                    
-                    if (isDragging) {
-                        createDragTrail(e.clientX, e.clientY);
-                    }
-                }
-            });
-        }
-
-        function createDragTrail(x, y) {
-            const trail = document.createElement('div');
-            trail.className = 'drag-trail';
-            trail.style.left = x + 'px';
-            trail.style.top = y + 'px';
-            document.body.appendChild(trail);
-            
-            setTimeout(() => {
-                if (trail.parentNode) {
-                    document.body.removeChild(trail);
-                }
-            }, 600);
-        }
-
-        function updateCursors() {
-            if (!gameData || !gameData.players || gameState !== 'building') {
-                return;
-            }
-            
-            // Only show cursors after 5 seconds into building stage
-            const buildingStartTime = gameData.building_start_time ? new Date(gameData.building_start_time).getTime() : Date.now();
-            const timeSinceBuilding = Math.floor((Date.now() - buildingStartTime) / 1000);
-            
-            if (timeSinceBuilding < 5) {
-                // Hide all cursors during first 5 seconds
-                for (const [playerId, cursorElement] of cursors) {
-                    if (cursorElement.parentNode) {
-                        cursorElement.style.display = 'none';
-                    }
-                }
-                return;
-            }
-            
-            const now = Date.now();
-            
-            gameData.players.forEach(player => {
-                if (player.id === playerId) return;
-                
-                const cursor = player.cursor;
-                if (!cursor || !cursor.x || !cursor.y) return;
-                
-                const lastUpdate = new Date(cursor.lastUpdate).getTime();
-                if (now - lastUpdate > 10000) return;
-                
-                let cursorElement = cursors.get(player.id);
-                
-                if (!cursorElement) {
-                    cursorElement = document.createElement('div');
-                    cursorElement.className = `cursor ${player.is_bot ? 'bot' : 'player'}`;
-                    
-                    const label = document.createElement('div');
-                    label.className = 'cursor-label';
-                    label.textContent = player.name + (player.is_bot ? ' 🤖' : '');
-                    cursorElement.appendChild(label);
-                    
-                    document.body.appendChild(cursorElement);
-                    cursors.set(player.id, cursorElement);
-                }
-                
-                // Show cursor after 5 seconds
-                cursorElement.style.display = 'block';
-                cursorElement.style.left = cursor.x + 'px';
-                cursorElement.style.top = cursor.y + 'px';
-                
-                if (cursor.action && player.is_bot) {
-                    const actionTime = new Date(cursor.action.timestamp).getTime();
-                    if (now - actionTime < 4000) {
-                        showCursorAction(cursorElement, cursor.action);
-                    }
-                }
-            });
-            
-            const currentPlayerIds = new Set(gameData.players.map(p => p.id));
-            for (const [playerId, cursorElement] of cursors) {
-                if (!currentPlayerIds.has(playerId)) {
-                    if (cursorElement.parentNode) {
-                        document.body.removeChild(cursorElement);
-                    }
-                    cursors.delete(playerId);
-                }
-            }
-        }
-
-        function showCursorAction(cursorElement, action) {
-            const existingAction = cursorElement.querySelector('.cursor-action');
-            if (existingAction) {
-                existingAction.remove();
-            }
-            
-            const actionElement = document.createElement('div');
-            actionElement.className = `cursor-action ${action.type}`;
-            
-            if (action.type === 'take') {
-                actionElement.textContent = `📦 ${action.feature}`;
-            } else if (action.type === 'steal') {
-                actionElement.textContent = `💰 Stole ${action.feature}`;
-            }
-            
-            cursorElement.appendChild(actionElement);
-            
-            setTimeout(() => {
-                if (actionElement.parentNode) {
-                    actionElement.remove();
-                }
-            }, 3000);
-        }
-
-        function cleanupCursors() {
-            for (const [playerId, cursorElement] of cursors) {
-                if (cursorElement.parentNode) {
-                    document.body.removeChild(cursorElement);
-                }
-            }
-            cursors.clear();
-        }
-
-        function animateFeatureAdd(slotElement) {
-            if (slotElement) {
-                slotElement.classList.add('feature-added');
-                setTimeout(() => {
-                    slotElement.classList.remove('feature-added');
-                }, 500);
-            }
-        }
-
-        // Results overlay functions
-        function showResultsOverlay() {
-            const overlay = elements.resultsOverlay();
-            if (!overlay || !currentPlayer || !gameData) return;
-            
-            // Calculate feature scores for display
-            const playerFeatures = currentPlayer.board || [];
-            const featureScores = playerFeatures.map(feature => {
-                const stats = gameData.feature_stats[feature];
-                // New scoring: only building selections count (no conjoint bonus)
-                const score = stats ? stats.build_selections * 5 : 0;
-                const stars = Math.min(5, Math.max(1, Math.ceil(score / 10)));
-                return { feature, score, stars };
-            });
-            
-            // Calculate player position
-            const sortedPlayers = [...gameData.players].sort((a, b) => (b.score || 0) - (a.score || 0));
-            const playerPosition = sortedPlayers.findIndex(p => p.id === playerId) + 1;
-            
-            // Calculate overall stars
-            const totalScore = currentPlayer.score || 0;
-            const overallStars = Math.min(5, Math.max(1, Math.ceil(totalScore / 20)));
-            
-            // Populate feature results
-            const featureResultsList = document.getElementById('featureResultsList');
-            if (featureResultsList) {
-                if (featureScores.length === 0) {
-                    featureResultsList.innerHTML = '<div style="color: #666; font-style: italic;">No features selected</div>';
-                } else {
-                    featureResultsList.innerHTML = featureScores.map(({ feature, score, stars }) => `
-                        <div class="feature-result-item">
-                            <div class="feature-name-result">${feature}</div>
-                            <div class="feature-stars">
-                                ${Array.from({length: 5}, (_, i) => `
-                                    <span class="feature-star" data-stars="${stars}">${'★'}</span>
-                                `).join('')}
-                            </div>
-                        </div>
-                    `).join('');
-                }
-            }
-            
-            // Set position badge
-            const positionBadge = document.getElementById('positionBadge');
-            if (positionBadge) {
-                let positionText = '';
-                let positionClass = '';
-                
-                switch(playerPosition) {
-                    case 1:
-                        positionText = '🏆 1st Place!';
-                        positionClass = 'first';
-                        break;
-                    case 2:
-                        positionText = '🥈 2nd Place!';
-                        positionClass = 'second';
-                        break;
-                    case 3:
-                        positionText = '🥉 3rd Place!';
-                        positionClass = 'third';
-                        break;
-                    default:
-                        positionText = `📊 ${playerPosition}${getOrdinalSuffix(playerPosition)} Place`;
-                        positionClass = '';
-                }
-                
-                positionBadge.textContent = positionText;
-                positionBadge.className = `position-badge ${positionClass}`;
-            }
-            
-            // Show overlay
-            overlay.classList.add('visible');
-            
-            // Start animations
-            setTimeout(() => animateFeatureResults(), 500);
-            setTimeout(() => animateTotalScore(overallStars), 2000 + (featureScores.length * 500));
-            setTimeout(() => animatePositionBadge(), 3500 + (featureScores.length * 500));
-            setTimeout(() => animateContinueButton(), 4500 + (featureScores.length * 500));
-        }
-
-        function getOrdinalSuffix(num) {
-            const j = num % 10;
-            const k = num % 100;
-            if (j == 1 && k != 11) return "st";
-            if (j == 2 && k != 12) return "nd";
-            if (j == 3 && k != 13) return "rd";
-            return "th";
-        }
-
-        function animateFeatureResults() {
-            const featureItems = document.querySelectorAll('.feature-result-item');
-            
-            featureItems.forEach((item, index) => {
-                setTimeout(() => {
-                    item.classList.add('animate-in');
-                    
-                    // Animate stars for this feature
-                    setTimeout(() => {
-                        const stars = item.querySelectorAll('.feature-star');
-                        const starCount = parseInt(stars[0]?.dataset.stars || 0);
-                        
-                        stars.forEach((star, starIndex) => {
-                            if (starIndex < starCount) {
-                                setTimeout(() => {
-                                    star.classList.add('filled');
-                                }, starIndex * 150);
-                            }
-                        });
-                    }, 200);
-                }, index * 500);
-            });
-        }
-
-        function animateTotalScore(overallStars) {
-            const totalScoreSection = document.getElementById('totalScoreSection');
-            if (totalScoreSection) {
-                totalScoreSection.classList.add('animate-in');
-                
-                // Animate total stars
-                setTimeout(() => {
-                    const totalStars = document.querySelectorAll('.total-star');
-                    totalStars.forEach((star, index) => {
-                        if (index < overallStars) {
-                            setTimeout(() => {
-                                star.classList.add('filled');
-                            }, index * 200);
-                        }
-                    });
-                }, 500);
-            }
-        }
-
-        function animatePositionBadge() {
-            const positionBadge = document.getElementById('positionBadge');
-            if (positionBadge) {
-                positionBadge.classList.add('animate-in');
-            }
-        }
-
-        function animateContinueButton() {
-            const continueButton = document.getElementById('continueToLeaderboard');
-            if (continueButton) {
-                continueButton.classList.add('animate-in');
-            }
-        }
-
-        function hideResultsOverlay() {
-            const overlay = elements.resultsOverlay();
-            if (overlay) {
-                overlay.classList.remove('visible');
-                
-                // Reset all animations
-                setTimeout(() => {
-                    const featureItems = document.querySelectorAll('.feature-result-item');
-                    const totalScoreSection = document.getElementById('totalScoreSection');
-                    const positionBadge = document.getElementById('positionBadge');
-                    const continueButton = document.getElementById('continueToLeaderboard');
-                    
-                    featureItems.forEach(item => {
-                        item.classList.remove('animate-in');
-                        const stars = item.querySelectorAll('.feature-star');
-                        stars.forEach(star => star.classList.remove('filled'));
-                    });
-                    
-                    if (totalScoreSection) totalScoreSection.classList.remove('animate-in');
-                    if (positionBadge) positionBadge.classList.remove('animate-in');
-                    if (continueButton) continueButton.classList.remove('animate-in');
-                    
-                    const totalStars = document.querySelectorAll('.total-star');
-                    totalStars.forEach(star => star.classList.remove('filled'));
-                }, 500);
-            }
-        }
-
-        // Initialize game when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded, initializing game...');
-            initializeGame();
-            initializeCursorTracking();
-        });
-
+        // Initialize game
         function initializeGame() {
-            console.log('Initializing game...');
-            
             const urlParams = new URLSearchParams(window.location.search);
             panelId = urlParams.get('panel') || urlParams.get('panelId') || '';
             returnUrl = urlParams.get('return') || urlParams.get('returnUrl') || '';
@@ -436,111 +360,15 @@
                 returnUrl = decodeURIComponent(returnUrl);
             }
 
-            if (panelId || returnUrl) {
-                const urlInfo = document.getElementById('urlInfo');
-                if (urlInfo) {
-                    urlInfo.style.display = 'block';
-                    let infoText = '';
-                    if (panelId) infoText += `Panel ID: ${panelId}<br>`;
-                    if (returnUrl) infoText += '✓ Connected to Survey';
-                    urlInfo.innerHTML = infoText;
-                }
-            }
-
-            setupEventListeners();
-
             if (autoStartParam === 'true') {
                 playerName = 'Participant';
-                elements.playerNameInput().value = playerName;
-                setTimeout(() => joinGame(), 1000);
+                setTimeout(() => joinGame('Participant'), 1000);
             }
             
-            console.log('Game initialized, showing entry form');
+            render();
         }
 
-        function setupEventListeners() {
-            const joinBtn = elements.joinGameBtn();
-            if (joinBtn) {
-                joinBtn.addEventListener('click', handleJoinGame);
-            }
-
-            const nameInput = elements.playerNameInput();
-            if (nameInput) {
-                nameInput.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        handleJoinGame();
-                    }
-                });
-            }
-
-            const submitBtn = elements.submitChoiceBtn();
-            if (submitBtn) {
-                submitBtn.addEventListener('click', submitConjointChoice);
-            }
-
-            const returnBtn = elements.returnBtn();
-            if (returnBtn) {
-                returnBtn.addEventListener('click', returnToSource);
-            }
-
-            const continueBtn = elements.continueToLeaderboard();
-            if (continueBtn) {
-                continueBtn.addEventListener('click', () => {
-                    hideResultsOverlay();
-                    showView('resultsView');
-                    updateResultsView();
-                });
-            }
-        }
-
-        function handleJoinGame() {
-            const nameInput = elements.playerNameInput();
-            if (!nameInput) return;
-            
-            const name = nameInput.value.trim();
-            if (!name) {
-                showError('Please enter your name');
-                return;
-            }
-            
-            playerName = name;
-            joinGame();
-        }
-
-        function showError(message) {
-            const errorEl = elements.errorMessage();
-            if (errorEl) {
-                errorEl.textContent = message;
-                errorEl.style.display = 'block';
-                setTimeout(() => {
-                    errorEl.style.display = 'none';
-                }, 3000);
-            }
-        }
-
-        function showView(viewName) {
-            console.log('🎯 showView called with:', viewName);
-            
-            const targetView = document.getElementById(viewName);
-            if (!targetView) {
-                console.error('❌ View not found:', viewName);
-                return;
-            }
-            
-            const views = ['entryView', 'lobbyView', 'conjointView', 'buildingView', 'resultsView'];
-            views.forEach(view => {
-                const el = document.getElementById(view);
-                if (el) {
-                    el.classList.add('hidden');
-                    el.style.display = 'none';
-                }
-            });
-
-            targetView.classList.remove('hidden');
-            targetView.style.display = 'block';
-            console.log('✅ Successfully set', viewName, 'to visible');
-        }
-
+        // API calls
         async function apiCall(endpoint, options = {}) {
             try {
                 const response = await fetch(`${API_BASE}${endpoint}`, {
@@ -552,12 +380,11 @@
                 });
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    throw new Error(`HTTP ${response.status}`);
                 }
                 
                 updateConnectionStatus('connected');
-                const data = await response.json();
-                return data;
+                return await response.json();
             } catch (error) {
                 console.error('API Error:', error);
                 updateConnectionStatus('disconnected');
@@ -568,31 +395,70 @@
         function updateConnectionStatus(status) {
             connectionStatus = status;
             const statusEl = document.getElementById('connectionStatus');
-            if (statusEl) {
-                statusEl.className = `connection-status ${status}`;
-                statusEl.textContent = status === 'connected' ? '🟢 Connected' : '🔴 Disconnected';
+            statusEl.className = `connection-status ${status}`;
+            statusEl.textContent = status === 'connected' ? '🟢 Connected' : '🔴 Disconnected';
+        }
+
+        // Timer functions
+        function startLocalTimer(duration = 10) {
+            console.log(`⏰ Starting local timer for ${duration} seconds`);
+            if (localTimer) {
+                console.log('🔄 Clearing existing timer');
+                clearInterval(localTimer);
+            }
+            
+            roundStartTime = Date.now();
+            
+            // Update immediately
+            if (gameData) {
+                gameData.round_timer = duration;
+            }
+            
+            localTimer = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - roundStartTime) / 1000);
+                const remaining = Math.max(0, duration - elapsed);
+                
+                if (gameData) {
+                    gameData.round_timer = remaining;
+                    
+                    // Only update the timer element if we can find it and we're in a countdown round
+                    const timerEl = document.querySelector('.timer');
+                    if (timerEl && gameData.current_round > 0) {
+                        timerEl.textContent = `⏰ ${remaining}s`;
+                    } else if (timerEl && gameData.current_round === 0) {
+                        timerEl.textContent = '🎮 Get Ready!';
+                    }
+                }
+                
+                if (remaining <= 0) {
+                    console.log('⏰ Timer reached zero');
+                    clearInterval(localTimer);
+                    localTimer = null;
+                }
+            }, 500); // Update every 500ms - smooth but not too aggressive
+        }
+
+        function stopLocalTimer() {
+            if (localTimer) {
+                clearInterval(localTimer);
+                localTimer = null;
+                roundStartTime = null;
             }
         }
 
-        async function joinGame() {
-            console.log('Attempting to join game with name:', playerName);
-            
-            if (!playerName.trim()) {
-                showError('Please enter your name');
+        // Game functions
+        async function joinGame(name = null) {
+            const participantName = name || playerName;
+            if (!participantName.trim()) {
+                alert('Please enter your name');
                 return;
             }
             
             try {
-                const joinBtn = elements.joinGameBtn();
-                if (joinBtn) {
-                    joinBtn.disabled = true;
-                    joinBtn.textContent = 'Joining...';
-                }
-                
                 const result = await apiCall('/game/join', {
                     method: 'POST',
                     body: JSON.stringify({
-                        playerName: playerName.trim(),
+                        playerName: participantName.trim(),
                         panelId: panelId
                     })
                 });
@@ -601,1505 +467,422 @@
                 playerId = result.playerId;
                 gameState = 'lobby';
                 
-                console.log('Successfully joined game:', gameId, 'as player:', playerId);
-                
-                showView('lobbyView');
+                // Start polling for game updates
                 startGameUpdates();
-                
+                render();
             } catch (error) {
-                console.error('Failed to join game:', error);
-                showError('Failed to join game. Please try again.');
-                
-                const joinBtn = elements.joinGameBtn();
-                if (joinBtn) {
-                    joinBtn.disabled = false;
-                    joinBtn.textContent = 'Join Game';
-                }
+                alert('Failed to join game. Please try again.');
             }
         }
 
         function startGameUpdates() {
-            console.log('Starting game updates...');
-            
             updateInterval = setInterval(async () => {
                 if (!gameId) return;
                 
                 try {
-                    await apiCall('/game/progress', {
-                        method: 'POST',
-                        body: JSON.stringify({ gameId })
-                    });
-                    
                     const status = await apiCall(`/game/status?gameId=${gameId}`);
-                    const previousStage = gameData?.stage;
+                    const previousRound = gameData?.current_round;
+                    const previousStatus = gameData?.status;
                     
                     gameData = status;
+                    
+                    // Find current player
                     currentPlayer = status.players.find(p => p.id === playerId);
                     
-                    if (status.stage !== gameState) {
-                        console.log('🔄 Stage changed from', gameState, 'to', status.stage);
-                        gameState = status.stage;
-                        
-                        setTimeout(() => {
-                            switch (status.stage) {
-                                case 'lobby':
-                                    showView('lobbyView');
-                                    break;
-                                case 'conjoint':
-                                    showView('conjointView');
-                                    selectedOption = null;
-                                    break;
-                                case 'building':
-                                    showView('buildingView');
-                                    break;
-                                case 'completed':
-                                    cleanupCursors();
-                                    clearInterval(updateInterval);
-                                    // Show animated overlay first
-                                    showResultsOverlay();
-                                    return;
-                            }
-                        }, 50);
+                    // Update game state based on server state
+                    if (status.status === 'lobby' && gameState !== 'lobby') {
+                        gameState = 'lobby';
+                        stopLocalTimer();
+                        render();
+                    } else if (status.status === 'playing' && gameState !== 'game') {
+                        gameState = 'game';
+                        console.log('🎯 Game started at round', status.current_round);
+                        render();
+                    } else if (status.status === 'completed' && gameState !== 'results') {
+                        gameState = 'results';
+                        stopLocalTimer();
+                        clearInterval(updateInterval);
+                        render();
                     }
                     
-                    switch (gameState) {
-                        case 'lobby':
-                            updateLobbyView();
-                            break;
-                        case 'conjoint':
-                            updateConjointView();
-                            break;
-                        case 'building':
-                            updateBuildingView();
-                            updateCursors();
-                            break;
+                    // Check if we moved to a new round
+                    if (gameState === 'game' && previousRound !== undefined && status.current_round > previousRound && status.current_round > 0) {
+                        console.log('🔄 New round detected:', previousRound, '->', status.current_round);
+                        console.log('🎯 Starting timer for new round', status.current_round);
+                        startLocalTimer(10);
+                        render(); // Re-render for new round
+                    }
+                    
+                    // If we're in a guessing round but no timer is running, start one (first time only)
+                    if (gameState === 'game' && status.current_round > 0 && !localTimer) {
+                        console.log('🔧 Starting timer for round', status.current_round);
+                        startLocalTimer(10);
+                        render();
+                    }
+                    
+                    // Only re-render during lobby or if there are major changes
+                    if (gameState === 'lobby' || 
+                        (gameState === 'game' && (previousRound !== status.current_round || previousStatus !== status.status))) {
+                        render();
+                    } else {
+                        // Just update player scores without full re-render
+                        updatePlayerScores();
                     }
                     
                 } catch (error) {
                     console.error('Failed to update game status:', error);
-                    updateConnectionStatus('disconnected');
-                    setTimeout(() => updateConnectionStatus('connected'), 5000);
                 }
-            }, gameState === 'building' ? 2000 : 1000);
+            }, gameState === 'lobby' ? 1000 : 3000); // Fast polling in lobby, slower during game
         }
 
-        function updateLobbyView() {
-            if (!gameData) return;
+        // Update only player scores without full re-render
+        function updatePlayerScores() {
+            if (!gameData || gameState !== 'game') return;
             
-            const lobbyTimer = Math.max(0, gameData.lobby_timer || 0);
             const players = gameData.players || [];
-            
-            const statusEl = document.getElementById('lobbyStatus');
-            if (statusEl) {
-                if (gameData.stage === 'conjoint') {
-                    statusEl.innerHTML = '🚀 Starting now!';
-                } else if (lobbyTimer <= 0) {
-                    statusEl.innerHTML = '🚀 Starting game...';
-                } else {
-                    statusEl.innerHTML = `🕐 Starting in ${lobbyTimer} seconds<br><small>Waiting for more players... (${players.filter(p => !p.is_bot).length}/4 real players)</small>`;
+            players.forEach(player => {
+                const playerEl = document.querySelector(`[data-player-id="${player.id}"] .player-score`);
+                if (playerEl) {
+                    playerEl.textContent = player.score || 0;
                 }
-            }
-            
-            const progressBar = document.querySelector('#lobbyProgress .progress-bar');
-            if (progressBar) {
-                const progress = ((20 - lobbyTimer) / 20) * 100;
-                progressBar.style.width = `${Math.max(0, Math.min(100, progress))}%`;
-            }
-            
-            const playersContainer = document.getElementById('playersContainer');
-            if (playersContainer) {
-                if (players.length === 0) {
-                    playersContainer.innerHTML = '<div style="text-align: center; color: #666;">Loading players...</div>';
-                } else {
-                    playersContainer.innerHTML = players.map(player => `
-                        <div class="player-item ${player.id === playerId ? 'current-user' : ''}">
-                            <div style="font-size: 2em; margin-bottom: 10px;">
-                                ${player.is_bot ? '🤖' : player.id === playerId ? '👤 (You)' : '👤'}
-                            </div>
-                            <div style="font-weight: bold;">${player.name || 'Unknown'}</div>
-                            <div style="font-size: 0.8em; color: #666;">
-                                ${player.is_bot ? 'Bot' : 'Real Player'}
-                            </div>
-                        </div>
-                    `).join('');
+                
+                const playerStatusEl = document.querySelector(`[data-player-id="${player.id}"] .player-status`);
+                if (playerStatusEl) {
+                    playerStatusEl.textContent = player.isBot ? '🤖 Bot' : player.guess ? '✓ Voted' : '⏳ Voting...';
                 }
-            }
+            });
         }
 
-        function updateConjointView() {
-            if (!gameData) return;
+        async function makeGuess(guess) {
+            console.log('🎯 makeGuess called with:', guess);
             
-            const timerEl = document.getElementById('conjointTimer');
-            if (timerEl) {
-                timerEl.textContent = `Time remaining: ${gameData.round_timer || 10}s`;
+            if (!gameId || !playerId) {
+                console.error('❌ Cannot make guess - missing gameId or playerId');
+                return;
             }
-            
-            const optionsContainer = document.getElementById('productOptions');
-            if (optionsContainer) {
-                if (!gameData.product_options || gameData.product_options.length === 0) {
-                    optionsContainer.innerHTML = '<div style="text-align: center; color: #666;">Loading product options...</div>';
-                } else {
-                    const hasSubmitted = currentPlayer?.conjoint_choice !== null;
-                    
-                    optionsContainer.innerHTML = gameData.product_options.map((option, index) => `
-                        <div class="product-option ${selectedOption === index ? 'selected' : ''}" 
-                             onclick="${hasSubmitted ? '' : `selectOption(${index})`}"
-                             style="${hasSubmitted ? 'opacity: 0.7; cursor: not-allowed;' : ''}">
-                            <h3>${option.name || `Product ${index + 1}`}</h3>
-                            <ul class="feature-list">
-                                ${(option.features || []).map(feature => `<li>${feature}</li>`).join('')}
-                            </ul>
-                            ${hasSubmitted && currentPlayer.conjoint_choice === index ? 
-                                '<div style="margin-top: 10px; color: #28a745; font-weight: bold;">✓ Your Choice</div>' : ''}
-                        </div>
-                    `).join('');
-                }
-            }
-            
-            const submitBtn = elements.submitChoiceBtn();
-            if (submitBtn) {
-                const hasSubmitted = currentPlayer?.conjoint_choice !== null;
-                submitBtn.disabled = selectedOption === null || hasSubmitted;
-                submitBtn.textContent = hasSubmitted ? 'Choice Submitted' : 'Submit Choice';
-            }
-        }
 
-        function updateBuildingView() {
-            if (!gameData) return;
-            
-            const timerEl = document.getElementById('buildingTimer');
-            if (timerEl) {
-                timerEl.textContent = `Time remaining: ${gameData.round_timer || 60}s`;
+            // Prevent multiple clicks
+            if (currentPlayer?.guess) {
+                console.log('⚠️ Guess already made:', currentPlayer.guess);
+                return;
             }
             
-            const featuresGrid = document.getElementById('featuresGrid');
-            if (featuresGrid) {
-                if (!gameData.available_features || gameData.available_features.length === 0) {
-                    featuresGrid.innerHTML = '<div style="text-align: center; color: #666;">No features available</div>';
-                } else {
-                    featuresGrid.innerHTML = gameData.available_features.map(feature => `
-                        <div class="feature-tile" draggable="true" 
-                             ondragstart="handleDragStart(event, '${feature}')"
-                             ondragend="handleDragEnd(event)">
-                            ${feature}
+            // Immediately disable buttons and show selection
+            const buttons = document.querySelectorAll('.vote-button');
+            buttons.forEach(btn => btn.disabled = true);
+            
+            const votingContainer = document.querySelector('.voting-buttons')?.parentElement;
+            if (votingContainer) {
+                votingContainer.innerHTML = `
+                    <div class="waiting-message">
+                        <div style="font-size: 1.5em; margin-bottom: 10px;">
+                            ${guess === 'higher' ? '↑' : '↓'} You guessed: <strong>${guess}</strong>
                         </div>
-                    `).join('');
-                }
+                        <p>Submitting vote...</p>
+                    </div>
+                `;
             }
             
-            const playerBoard = document.getElementById('playerBoard');
-            if (playerBoard && currentPlayer) {
-                const board = currentPlayer.board || [];
-                playerBoard.innerHTML = '';
+            try {
+                console.log('📤 Submitting guess to API...');
                 
-                for (let i = 0; i < 4; i++) {
-                    const slot = document.createElement('div');
-                    slot.className = 'board-slot';
-                    slot.ondrop = (e) => handleDrop(e, i);
-                    slot.ondragover = handleDragOver;
-                    slot.ondragenter = (e) => e.preventDefault();
-                    
-                    if (board[i]) {
-                        slot.classList.add('filled');
-                        slot.textContent = board[i];
-                    } else {
-                        slot.textContent = `Slot ${i + 1}`;
-                    }
-                    
-                    playerBoard.appendChild(slot);
+                // Update local state
+                if (currentPlayer) {
+                    currentPlayer.guess = guess;
                 }
-            }
-            
-            const otherPlayersContainer = document.getElementById('otherPlayersContainer');
-            if (otherPlayersContainer && gameData.players) {
-                const otherPlayers = gameData.players.filter(p => p.id !== playerId);
                 
-                if (otherPlayers.length === 0) {
-                    otherPlayersContainer.innerHTML = '<div style="text-align: center; color: #666;">No other players</div>';
-                } else {
-                    otherPlayersContainer.innerHTML = otherPlayers.map(player => `
-                        <div class="other-player ${player.board && player.board.length > 0 ? 'has-features' : ''}">
-                            <h4>${player.name || 'Unknown'} ${player.is_bot ? '🤖' : ''}</h4>
-                            <div class="other-player-features">
-                                ${Array.from({length: 4}, (_, i) => `
-                                    <div class="feature-slot ${player.board && player.board[i] ? 'filled' : 'empty'}"
-                                         ${player.board && player.board[i] ? 
-                                           `draggable="true" ondragstart="handleDragStart(event, '${player.board[i]}', '${player.id}')" ondragend="handleDragEnd(event)"` : ''}>
-                                        ${player.board && player.board[i] ? player.board[i] : 'Empty'}
-                                    </div>
-                                `).join('')}
-                            </div>
-                            ${player.board && player.board.length > 0 ? 
-                                '<div class="steal-hint">Click and drag features to steal them!</div>' : ''}
-                        </div>
-                    `).join('');
-                }
-            }
-        }
-
-        function updateResultsView() {
-            if (!gameData) return;
-            
-            const leaderboardContainer = document.getElementById('leaderboardContainer');
-            if (leaderboardContainer && gameData.players) {
-                const sortedPlayers = [...gameData.players].sort((a, b) => (b.score || 0) - (a.score || 0));
+                await apiCall('/game/guess', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        gameId,
+                        playerId,
+                        guess
+                    })
+                });
                 
-                leaderboardContainer.innerHTML = sortedPlayers.map((player, index) => {
-                    let positionClass = '';
-                    if (index === 0) positionClass = 'winner';
-                    else if (index === 1) positionClass = 'second';
-                    else if (index === 2) positionClass = 'third';
+                console.log('✅ Guess submitted successfully');
+                
+                // Update the waiting message
+                if (votingContainer) {
+                    const players = gameData?.players || [];
+                    const realPlayers = players.filter(p => !p.isBot);
+                    const votedPlayers = realPlayers.filter(p => p.guess);
                     
-                    const rating = getOverallRating(player);
-                    
-                    return `
-                        <div class="leaderboard-item ${positionClass} ${player.id === playerId ? 'current-user' : ''}">
-                            <div>
-                                <div style="font-weight: bold; font-size: 1.1em;">
-                                    ${index + 1}. ${player.name} ${player.is_bot ? '🤖' : ''}
-                                    ${player.id === playerId ? ' (You)' : ''}
-                                </div>
-                                <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
-                                    Features: ${player.board ? player.board.join(', ') : 'None'}
-                                </div>
+                    votingContainer.innerHTML = `
+                        <div class="waiting-message">
+                            <div style="font-size: 1.5em; margin-bottom: 10px;">
+                                ${guess === 'higher' ? '↑' : '↓'} You guessed: <strong>${guess}</strong>
                             </div>
-                            <div style="text-align: right;">
-                                <div style="font-size: 1.2em; font-weight: bold; margin-bottom: 5px;">
-                                    ${player.score || 0} pts
-                                </div>
-                                ${renderStars(rating)}
-                            </div>
+                            <p>Waiting for other players... (${votedPlayers.length}/${realPlayers.length} voted)</p>
                         </div>
                     `;
-                }).join('');
-            }
-        }
-
-        function selectOption(optionIndex) {
-            if (currentPlayer?.conjoint_choice !== null) return;
-            
-            document.querySelectorAll('.product-option').forEach(el => 
-                el.classList.remove('selected'));
-            
-            const optionElements = document.querySelectorAll('.product-option');
-            if (optionElements[optionIndex]) {
-                optionElements[optionIndex].classList.add('selected');
-            }
-            
-            selectedOption = optionIndex;
-            
-            const submitBtn = elements.submitChoiceBtn();
-            if (submitBtn) {
-                submitBtn.disabled = false;
-            }
-        }
-
-        async function submitConjointChoice() {
-            if (selectedOption === null || currentPlayer?.conjoint_choice !== null) return;
-            
-            try {
-                const submitBtn = elements.submitChoiceBtn();
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.textContent = 'Submitting...';
                 }
                 
-                await apiCall('/game/conjoint', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        gameId,
-                        playerId,
-                        choice: selectedOption
-                    })
-                });
-                
+            } catch (error) {
+                console.error('❌ Failed to submit guess:', error);
+                // Revert on error
                 if (currentPlayer) {
-                    currentPlayer.conjoint_choice = selectedOption;
+                    delete currentPlayer.guess;
                 }
-                
-                updateConjointView();
-                
-            } catch (error) {
-                console.error('Failed to submit conjoint choice:', error);
-                showError('Failed to submit choice. Please try again.');
+                alert('Failed to submit guess. Please try again.');
+                render(); // Re-render to restore buttons
             }
-        }
-
-        async function addFeatureToBoard(feature, slotIndex = null) {
-            if (!gameId || !playerId || gameState !== 'building') return;
-            
-            try {
-                await apiCall('/game/build', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        gameId,
-                        playerId,
-                        action: 'add',
-                        feature,
-                        slotIndex
-                    })
-                });
-                
-                if (currentPlayer && currentPlayer.board.length < 4) {
-                    if (slotIndex !== null && slotIndex < 4) {
-                        currentPlayer.board[slotIndex] = feature;
-                    } else {
-                        currentPlayer.board.push(feature);
-                    }
-                    
-                    if (gameData && gameData.available_features) {
-                        const featureIndex = gameData.available_features.indexOf(feature);
-                        if (featureIndex !== -1) {
-                            gameData.available_features.splice(featureIndex, 1);
-                        }
-                    }
-                    
-                    updateBuildingView();
-                }
-                
-            } catch (error) {
-                console.error('Failed to add feature:', error);
-                showNotification('Failed to add feature. Please try again.', 'error');
-            }
-        }
-
-        async function stealFeature(sourcePlayerId, feature, targetSlot) {
-            if (!gameId || !playerId || gameState !== 'building') return;
-            
-            try {
-                await apiCall('/game/build', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        gameId,
-                        playerId,
-                        action: 'steal',
-                        feature,
-                        sourcePlayerId,
-                        slotIndex: targetSlot
-                    })
-                });
-                
-                if (currentPlayer && gameData && gameData.players) {
-                    const sourcePlayer = gameData.players.find(p => p.id === sourcePlayerId);
-                    if (sourcePlayer) {
-                        const featureIndex = sourcePlayer.board.indexOf(feature);
-                        if (featureIndex !== -1) {
-                            sourcePlayer.board.splice(featureIndex, 1);
-                            
-                            if (targetSlot !== null && targetSlot < 4) {
-                                currentPlayer.board[targetSlot] = feature;
-                            } else {
-                                currentPlayer.board.push(feature);
-                            }
-                            
-                            updateBuildingView();
-                        }
-                    }
-                }
-                
-            } catch (error) {
-                console.error('Failed to steal feature:', error);
-                showNotification('Failed to steal feature. Please try again.', 'error');
-            }
-        }
-
-        function handleDragStart(event, feature, sourcePlayerId = null) {
-            isDragging = true;
-            
-            event.dataTransfer.setData('text/plain', feature);
-            if (sourcePlayerId) {
-                event.dataTransfer.setData('source-player', sourcePlayerId);
-            }
-            event.dataTransfer.effectAllowed = 'move';
-            
-            event.target.classList.add('dragging');
-            
-            const playerBoardSlots = document.querySelectorAll('#playerBoard .board-slot:not(.filled)');
-            playerBoardSlots.forEach(slot => {
-                slot.classList.add(sourcePlayerId ? 'steal-target' : 'can-drop');
-            });
-        }
-
-        function handleDragEnd(event) {
-            isDragging = false;
-            event.target.classList.remove('dragging');
-            
-            const allBoardSlots = document.querySelectorAll('.board-slot');
-            allBoardSlots.forEach(slot => {
-                slot.classList.remove('can-drop', 'steal-target');
-            });
-        }
-
-        function handleDrop(event, slotIndex) {
-            event.preventDefault();
-            event.stopPropagation();
-            
-            const feature = event.dataTransfer.getData('text/plain');
-            const sourcePlayerId = event.dataTransfer.getData('source-player');
-            
-            if (!feature) return;
-            
-            if (currentPlayer && currentPlayer.board && currentPlayer.board[slotIndex]) {
-                showNotification('Slot is already filled!', 'error');
-                return;
-            }
-            
-            if (currentPlayer && currentPlayer.board && currentPlayer.board.length >= 4) {
-                showNotification('Your board is full!', 'error');
-                return;
-            }
-            
-            if (sourcePlayerId) {
-                stealFeature(sourcePlayerId, feature, slotIndex);
-            } else {
-                addFeatureToBoard(feature, slotIndex);
-            }
-            
-            event.target.classList.remove('can-drop', 'steal-target');
-        }
-
-        function handleDragOver(event) {
-            event.preventDefault();
-            event.dataTransfer.dropEffect = 'move';
-        }
-
-        function showNotification(message, type = 'success') {
-            const notification = document.createElement('div');
-            const bgColor = type === 'error' ? '#dc3545' : '#28a745';
-            notification.style.cssText = `
-                position: fixed;
-                top: 70px;
-                right: 20px;
-                background: ${bgColor};
-                color: white;
-                padding: 15px 20px;
-                border-radius: 8px;
-                z-index: 1001;
-                font-weight: bold;
-                max-width: 300px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            `;
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    document.body.removeChild(notification);
-                }
-            }, 4000);
-        }
-
-        function getOverallRating(player) {
-            if (!player.board || player.board.length === 0) return 1;
-            // Updated rating calculation based on new scoring system
-            const score = player.score || 0;
-            return Math.min(5, Math.max(1, Math.ceil(score / 20)));
-        }
-
-        function renderStars(rating, maxStars = 5) {
-            let stars = '';
-            for (let i = 1; i <= maxStars; i++) {
-                stars += `<span class="star ${i <= rating ? '' : 'empty'}">★</span>`;
-            }
-            return `<div class="star-rating">${stars}</div>`;
         }
 
         function returnToSource() {
+            stopLocalTimer();
             if (updateInterval) {
                 clearInterval(updateInterval);
             }
             
             if (returnUrl) {
-                try {
-                    const url = new URL(returnUrl);
-                    if (panelId) url.searchParams.set('panel', panelId);
-                    url.searchParams.set('completed', 'true');
-                    url.searchParams.set('score', currentPlayer?.score || 0);
-                    
-                    window.location.href = url.toString();
-                } catch (error) {
-                    console.error('Error parsing return URL:', error);
-                    alert(`Game Complete! Final Score: ${currentPlayer?.score || 0}`);
-                    window.location.reload();
-                }
+                const url = new URL(returnUrl);
+                if (panelId) url.searchParams.set('panel', panelId);
+                url.searchParams.set('completed', 'true');
+                url.searchParams.set('score', currentPlayer?.score || 0);
+                url.searchParams.set('rounds', gameData?.current_round || 0);
+                
+                window.location.href = url.toString();
             } else {
                 alert(`Game Complete! Final Score: ${currentPlayer?.score || 0}`);
                 window.location.reload();
             }
         }
 
-        // Global error handler
-        window.addEventListener('error', function(e) {
-            console.error('Global error:', e.error);
-            updateConnectionStatus('disconnected');
+        function render() {
+            const root = document.getElementById('root');
+            
+            if (gameState === 'entry') {
+                root.innerHTML = `
+                    <div class="container">
+                        <div style="text-align: center; margin-bottom: 30px;">
+                            <h1 style="font-size: 3em; color: white; margin-bottom: 10px;">🎯 Price is Right</h1>
+                            <p style="font-size: 1.2em; color: rgba(255,255,255,0.9);">Market Research Game</p>
+                        </div>
+                        
+                        ${(panelId || returnUrl) ? `
+                            <div style="background: rgba(255, 255, 255, 0.2); color: white; padding: 10px; border-radius: 8px; margin-bottom: 15px; text-align: center; font-size: 0.9em;">
+                                ${panelId ? `<div>Panel ID: ${panelId}</div>` : ''}
+                                ${returnUrl ? `<div>✓ Connected to Survey</div>` : ''}
+                            </div>
+                        ` : ''}
+                        
+                        <div class="entry-form">
+                            <h2 style="text-align: center; margin-bottom: 20px;">Welcome!</h2>
+                            <input type="text" id="playerNameInput" class="form-input" placeholder="Enter your name" onkeypress="if(event.key==='Enter') joinGameFromInput()">
+                            <button onclick="joinGameFromInput()" class="form-button">Join Game</button>
+                        </div>
+                    </div>
+                `;
+            } else if (gameState === 'lobby') {
+                const lobbyTimer = gameData ? Math.max(0, 20 - Math.floor((Date.now() - new Date(gameData.created_at)) / 1000)) : 20;
+                const players = gameData?.players || [];
+                
+                root.innerHTML = `
+                    <div class="container">
+                        <div class="game-header">
+                            <h2 style="font-size: 2em; margin-bottom: 15px;">🎮 Game Lobby</h2>
+                            <p style="font-size: 1.2em; color: #666;">
+                                🕐 ${gameData?.status === 'playing' ? 'Starting now!' : `Starting in ${lobbyTimer} seconds`}
+                            </p>
+                            <p style="font-size: 1em; color: #666; margin-top: 10px;">
+                                Waiting for more players... (${players.filter(p => !p.isBot).length}/4 real players)
+                            </p>
+                            <div style="width: 100%; height: 8px; background: #f0f0f0; border-radius: 4px; margin-top: 20px; overflow: hidden;">
+                                <div style="width: ${((20 - lobbyTimer) / 20) * 100}%; height: 100%; background: #4CAF50; transition: width 1s ease;"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="players-section">
+                            <h3 style="margin-bottom: 20px; text-align: center;">Players in Lobby</h3>
+                            <div class="players-grid">
+                                ${players.map(player => `
+                                    <div class="player ${player.id === playerId ? 'current-user' : ''} ${player.isBot ? 'bot' : ''}">
+                                        <div style="font-size: 2em; margin-bottom: 10px;">
+                                            ${player.isBot ? '🤖' : player.id === playerId ? '👤 (You)' : '👤'}
+                                        </div>
+                                        <div class="player-name">${player.name}</div>
+                                        <div class="player-status">
+                                            ${player.isBot ? 'Bot' : 'Real Player'}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                                ${Array.from({length: Math.max(0, 4 - players.length)}, (_, i) => `
+                                    <div class="player" style="opacity: 0.5; border: 2px dashed #ccc;">
+                                        <div style="font-size: 2em; margin-bottom: 10px;">⏳</div>
+                                        <div class="player-name">Waiting...</div>
+                                        <div class="player-status">Empty slot</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (gameState === 'game') {
+                if (!gameData || !gameData.products) {
+                    root.innerHTML = '<div class="container"><div class="game-header"><h2>Loading game...</h2></div></div>';
+                    return;
+                }
+                
+                const currentRound = gameData.current_round;
+                const products = gameData.products;
+                const finaleProduct = gameData.finale_product;
+                const maxRounds = products.length + (finaleProduct ? 1 : 0);
+                const isFinaleRound = finaleProduct && currentRound === products.length;
+                
+                const currentProduct = currentRound < products.length ? products[currentRound] : finaleProduct;
+                const previousProduct = currentRound > 0 ? (currentRound <= products.length ? products[currentRound - 1] : products[products.length - 1]) : null;
+                
+                const players = gameData.players || [];
+                const realPlayers = players.filter(p => !p.isBot);
+                const votedPlayers = realPlayers.filter(p => p.guess);
+                
+                const playerGuess = currentPlayer?.guess;
+                const allRealPlayersVoted = votedPlayers.length === realPlayers.length;
+                
+                // Use local timer if available, otherwise fallback to server timer
+                const displayTimer = gameData.round_timer || 0;
+                
+                root.innerHTML = `
+                    <div class="container">
+                        <div class="game-header">
+                            <div class="round-info">
+                                <h2>Round ${currentRound + 1} of ${maxRounds}${isFinaleRound ? ' <span style="color: #FFD700;">⭐ FINALE</span>' : ''}</h2>
+                                <div class="timer">${currentRound > 0 ? `⏰ ${displayTimer}s` : '🎮 Get Ready!'}</div>
+                                <div class="score">🏆 ${currentPlayer?.score || 0}</div>
+                            </div>
+                        </div>
+
+                        <div class="products-grid">
+                            ${previousProduct ? `
+                                <div class="product-card">
+                                    <h3 style="margin-bottom: 15px;">Previous Product</h3>
+                                    <div class="product-image">${previousProduct.image}</div>
+                                    <div class="product-name">${previousProduct.name}</div>
+                                    <div class="product-price">$${previousProduct.price}</div>
+                                </div>
+                            ` : ''}
+
+                            <div class="product-card current ${isFinaleRound ? 'finale' : ''}">
+                                <h3 style="margin-bottom: 15px;">Current Product ${isFinaleRound ? '⭐' : ''}</h3>
+                                <div class="product-image">${currentProduct?.image}</div>
+                                <div class="product-name">${currentProduct?.name}</div>
+                                ${currentRound === 0 ? `<div class="product-price">$${currentProduct?.price}</div>` : ''}
+                            </div>
+                        </div>
+
+                        ${currentRound > 0 ? `
+                            <div>
+                                ${!playerGuess ? `
+                                    <p style="text-align: center; font-size: 1.2em; margin-bottom: 20px;">
+                                        Is this price <strong>higher</strong> or <strong>lower</strong> than the previous product?
+                                    </p>
+                                    <div class="voting-buttons">
+                                        <button onclick="window.makeGuess('higher')" class="vote-button higher">↑ Higher</button>
+                                        <button onclick="window.makeGuess('lower')" class="vote-button lower">↓ Lower</button>
+                                    </div>
+                                ` : `
+                                    <div class="waiting-message">
+                                        <div style="font-size: 1.5em; margin-bottom: 10px;">
+                                            ${playerGuess === 'higher' ? '↑' : '↓'} You guessed: <strong>${playerGuess}</strong>
+                                        </div>
+                                        <p>Waiting for other players... (${votedPlayers.length}/${realPlayers.length} voted)</p>
+                                        ${allRealPlayersVoted ? '<p style="color: #4CAF50; font-weight: bold;">Processing results...</p>' : ''}
+                                    </div>
+                                `}
+                            </div>
+                        ` : `
+                            <div class="waiting-message">
+                                <div style="font-size: 1.2em; margin-bottom: 10px;">
+                                    📋 <strong>Round ${currentRound + 1}</strong>
+                                </div>
+                                <p>Get ready for the first comparison...</p>
+                            </div>
+                        `}
+
+                        <div class="players-section">
+                            <h3 style="margin-bottom: 15px; text-align: center;">Current Standings</h3>
+                            <div class="players-grid">
+                                ${players.map(player => `
+                                    <div class="player ${player.id === playerId ? 'current-user' : ''} ${player.guess ? 'voted' : ''} ${player.isBot ? 'bot' : ''}" data-player-id="${player.id}">
+                                        <div class="player-name">${player.name}${player.id === playerId ? ' (You)' : ''}</div>
+                                        <div class="player-score">${player.score || 0}</div>
+                                        <div class="player-status">
+                                            ${player.isBot ? '🤖 Bot' : player.guess ? '✓ Voted' : '⏳ Voting...'}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else if (gameState === 'results') {
+                const players = gameData?.players || [];
+                const sortedPlayers = [...players].sort((a, b) => (b.score || 0) - (a.score || 0));
+                
+                root.innerHTML = `
+                    <div class="container">
+                        <div class="results-container">
+                            <h2 style="text-align: center; font-size: 2.2em; margin-bottom: 25px; color: #2c3e50;">🎉 Game Complete!</h2>
+                            <p style="text-align: center; margin-bottom: 30px; font-size: 1.1em; color: #666;">
+                                Thanks for participating in our market research!
+                            </p>
+
+                            <div style="margin-bottom: 30px;">
+                                <h3 style="margin-bottom: 20px;">Final Scores</h3>
+                                ${sortedPlayers.map((player, index) => `
+                                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px; margin-bottom: 10px; background: ${player.id === playerId ? '#e8f5e8' : '#f8f9fa'}; border-radius: 10px; ${player.id === playerId ? 'border: 2px solid #4CAF50;' : ''}">
+                                        <div style="display: flex; align-items: center;">
+                                            <div style="width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; margin-right: 15px; background: ${index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : index === 2 ? '#CD7F32' : '#999'};">
+                                                ${index + 1}
+                                            </div>
+                                            <div>
+                                                <span style="font-weight: bold;">${player.name}${player.id === playerId ? ' (You)' : ''}</span>
+                                                <div style="font-size: 0.8em; color: #666;">${player.isBot ? '🤖 Bot' : '👤 Real Player'}</div>
+                                            </div>
+                                        </div>
+                                        <span style="font-size: 1.2em; font-weight: bold; color: #2196F3;">${player.score || 0}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+
+                            <div style="text-align: center;">
+                                <button onclick="returnToSource()" style="display: block; width: 200px; margin: 20px auto; padding: 15px; background: #2196F3; color: white; border: none; border-radius: 10px; font-size: 1.1em; font-weight: bold; cursor: pointer;">
+                                    ${returnUrl ? 'Continue to Survey' : 'Complete Game'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function joinGameFromInput() {
+            const input = document.getElementById('playerNameInput');
+            if (input) {
+                playerName = input.value;
+                joinGame();
+            }
+        }
+
+        // Make functions available globally
+        window.joinGameFromInput = joinGameFromInput;
+        window.makeGuess = makeGuess;
+        window.returnToSource = returnToSource;
+
+        // Initialize the game
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeGame();
+            console.log('🎯 Multiplayer Price is Right Game loaded!');
         });
 
-        document.addEventListener('dragend', handleDragEnd);
+        // Clean up on page unload
+        window.addEventListener('beforeunload', function() {
+            stopLocalTimer();
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+        });
     </script>
 </body>
-</html> <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Product Builder - Market Research Game</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            color: #333;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .game-header {
-            text-align: center;
-            margin-bottom: 30px;
-            color: white;
-        }
-
-        .game-title {
-            font-size: 2.5rem;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-
-        .game-subtitle {
-            font-size: 1.2rem;
-            opacity: 0.9;
-        }
-
-        .connection-status {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 10px 15px;
-            border-radius: 20px;
-            font-size: 0.9em;
-            font-weight: bold;
-            z-index: 1000;
-        }
-
-        .connection-status.connected {
-            background: #4CAF50;
-            color: white;
-        }
-
-        .connection-status.disconnected {
-            background: #f44336;
-            color: white;
-        }
-
-        /* Results Overlay Styles */
-        .results-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: 10000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.5s ease;
-        }
-
-        .results-overlay.visible {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .results-content {
-            background: white;
-            border-radius: 20px;
-            padding: 40px;
-            max-width: 600px;
-            width: 90%;
-            text-align: center;
-            transform: scale(0.8);
-            transition: transform 0.5s ease;
-        }
-
-        .results-overlay.visible .results-content {
-            transform: scale(1);
-        }
-
-        .results-title {
-            font-size: 2.5rem;
-            font-weight: bold;
-            margin-bottom: 30px;
-            color: #333;
-        }
-
-        .feature-results {
-            margin: 30px 0;
-        }
-
-        .feature-result-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px;
-            margin: 10px 0;
-            background: #f8f9fa;
-            border-radius: 10px;
-            opacity: 0;
-            transform: translateY(20px);
-            transition: all 0.5s ease;
-        }
-
-        .feature-result-item.animate-in {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .feature-name-result {
-            font-size: 1.1rem;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .feature-stars {
-            display: flex;
-            gap: 3px;
-        }
-
-        .feature-star {
-            font-size: 1.5rem;
-            color: #ddd;
-            transition: color 0.3s ease;
-        }
-
-        .feature-star.filled {
-            color: #ffd700;
-            animation: starFill 0.5s ease forwards;
-        }
-
-        @keyframes starFill {
-            0% {
-                transform: scale(0.5);
-                color: #ddd;
-            }
-            50% {
-                transform: scale(1.3);
-            }
-            100% {
-                transform: scale(1);
-                color: #ffd700;
-            }
-        }
-
-        .total-score-section {
-            margin: 40px 0;
-            padding: 30px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border-radius: 15px;
-            color: white;
-            opacity: 0;
-            transform: scale(0.9);
-            transition: all 0.7s ease;
-        }
-
-        .total-score-section.animate-in {
-            opacity: 1;
-            transform: scale(1);
-        }
-
-        .total-score-title {
-            font-size: 1.5rem;
-            margin-bottom: 20px;
-        }
-
-        .total-stars {
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            margin: 20px 0;
-        }
-
-        .total-star {
-            font-size: 3rem;
-            color: rgba(255, 255, 255, 0.3);
-            transition: all 0.5s ease;
-        }
-
-        .total-star.filled {
-            color: #ffd700;
-            animation: totalStarFill 0.8s ease forwards;
-        }
-
-        @keyframes totalStarFill {
-            0% {
-                transform: scale(0.3) rotate(-180deg);
-                color: rgba(255, 255, 255, 0.3);
-            }
-            70% {
-                transform: scale(1.2) rotate(10deg);
-            }
-            100% {
-                transform: scale(1) rotate(0deg);
-                color: #ffd700;
-            }
-        }
-
-        .position-badge {
-            display: inline-block;
-            padding: 15px 30px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 25px;
-            font-size: 1.3rem;
-            font-weight: bold;
-            margin-top: 20px;
-            opacity: 0;
-            transform: translateY(20px);
-            transition: all 0.5s ease;
-        }
-
-        .position-badge.animate-in {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .position-badge.first {
-            background: linear-gradient(135deg, #ffd700, #ffed4e);
-            color: #333;
-        }
-
-        .position-badge.second {
-            background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
-            color: #333;
-        }
-
-        .position-badge.third {
-            background: linear-gradient(135deg, #cd7f32, #daa544);
-            color: white;
-        }
-
-        .continue-button {
-            margin-top: 30px;
-            padding: 15px 40px;
-            background: white;
-            color: #667eea;
-            border: none;
-            border-radius: 10px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            opacity: 0;
-            transform: translateY(20px);
-        }
-
-        .continue-button.animate-in {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .continue-button:hover {
-            background: #f0f4ff;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-        }
-
-        .entry-form {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            max-width: 400px;
-            margin: 0 auto;
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e1e5e9;
-            border-radius: 8px;
-            font-size: 1em;
-            margin-bottom: 15px;
-        }
-
-        .form-input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .form-button {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1.1em;
-            font-weight: bold;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        .form-button:hover {
-            transform: translateY(-2px);
-        }
-
-        .form-button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .lobby-screen {
-            background: white;
-            border-radius: 15px;
-            padding: 40px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-
-        .progress-bar-container {
-            width: 100%;
-            height: 12px;
-            background: #e1e5e9;
-            border-radius: 6px;
-            overflow: hidden;
-        }
-
-        .progress-bar {
-            height: 100%;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            width: 0%;
-            border-radius: 6px;
-            transition: width 0.1s linear;
-        }
-
-        .players-list {
-            margin: 20px 0;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 10px;
-        }
-
-        .player-item {
-            display: inline-block;
-            background: white;
-            margin: 5px;
-            padding: 8px 16px;
-            border-radius: 20px;
-            border: 2px solid #e1e5e9;
-        }
-
-        .player-item.current-user {
-            border-color: #28a745;
-            background: #f8fff8;
-        }
-
-        .game-stage {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            display: none;
-        }
-
-        .game-stage.active {
-            display: block;
-        }
-
-        .stage-header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .stage-title {
-            font-size: 2rem;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-
-        .stage-description {
-            font-size: 1.1rem;
-            color: #666;
-            margin-bottom: 20px;
-        }
-
-        .timer {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #e74c3c;
-            margin-bottom: 20px;
-        }
-
-        .product-options {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin: 30px 0;
-        }
-
-        .product-option {
-            border: 2px solid #e1e5e9;
-            border-radius: 12px;
-            padding: 20px;
-            cursor: pointer;
-            transition: all 0.3s;
-            background: #f8f9fa;
-        }
-
-        .product-option:hover {
-            border-color: #667eea;
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        }
-
-        .product-option.selected {
-            border-color: #667eea;
-            background: #f0f4ff;
-        }
-
-        .feature-list {
-            list-style: none;
-        }
-
-        .feature-list li {
-            padding: 5px 0;
-            color: #555;
-        }
-
-        .feature-list li:before {
-            content: "✓ ";
-            color: #28a745;
-            font-weight: bold;
-        }
-
-        .building-area {
-            display: grid;
-            grid-template-columns: 1fr 300px;
-            gap: 30px;
-            margin: 20px 0;
-        }
-
-        .left-column {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .right-column {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-
-        .feature-pool {
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 20px;
-            min-height: 400px;
-        }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 10px;
-        }
-
-        .feature-tile {
-            background: white;
-            border: 2px solid #e1e5e9;
-            border-radius: 8px;
-            padding: 12px;
-            text-align: center;
-            cursor: grab;
-            transition: all 0.3s;
-            font-size: 0.9rem;
-        }
-
-        .feature-tile:hover {
-            border-color: #667eea;
-            transform: scale(1.05);
-        }
-
-        .feature-tile:active {
-            cursor: grabbing;
-        }
-
-        .player-board {
-            background: white;
-            border: 3px solid #667eea;
-            border-radius: 12px;
-            padding: 20px;
-            min-height: 400px;
-        }
-
-        .board-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            min-height: 200px;
-        }
-
-        .board-slot {
-            border: 2px dashed #ccc;
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-            color: #999;
-            transition: all 0.3s;
-        }
-
-        .board-slot.filled {
-            border: 2px solid #28a745;
-            background: #f8fff8;
-            color: #333;
-        }
-
-        .board-slot.can-drop {
-            border-color: #667eea;
-            background: #f0f4ff;
-        }
-
-        .board-slot.steal-target {
-            border-color: #667eea !important;
-            background: #f0f4ff !important;
-            transform: scale(1.02);
-        }
-
-        .other-players {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-        }
-
-        .other-player {
-            background: #f8f9fa;
-            border: 2px solid #e1e5e9;
-            border-radius: 8px;
-            padding: 15px;
-            position: relative;
-            transition: all 0.3s;
-            cursor: pointer;
-        }
-
-        .other-player:hover {
-            border-color: #667eea;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
-            transform: translateY(-2px);
-        }
-
-        .other-player.has-features {
-            border-color: #28a745;
-            background: #f8fff8;
-        }
-
-        .other-player.has-features:hover {
-            border-color: #667eea;
-            background: #f0f4ff;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-        }
-
-        .other-player-features {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
-            margin: 10px 0;
-            min-height: 60px;
-        }
-
-        .feature-slot {
-            background: white;
-            border: 2px dashed #ddd;
-            border-radius: 6px;
-            padding: 8px;
-            text-align: center;
-            font-size: 0.8rem;
-            min-height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-
-        .feature-slot.filled {
-            border: 2px solid #28a745;
-            background: #f8fff8;
-            color: #333;
-            cursor: grab;
-            font-weight: 500;
-            user-select: none;
-        }
-
-        .feature-slot.filled:active {
-            cursor: grabbing;
-        }
-
-        .feature-slot.filled:hover {
-            border-color: #667eea;
-            background: #f0f4ff;
-            transform: scale(1.05);
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-        }
-
-        .feature-slot.filled.dragging {
-            opacity: 0.5;
-            transform: scale(0.95);
-        }
-
-        .feature-slot.empty {
-            color: #999;
-            font-style: italic;
-        }
-
-        .steal-hint {
-            font-size: 0.7rem;
-            color: #667eea;
-            margin-top: 5px;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .other-player.has-features:hover .steal-hint {
-            opacity: 1;
-        }
-
-        .results-container {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        }
-
-        .leaderboard {
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 30px;
-            margin: 30px 0;
-        }
-
-        .leaderboard-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px;
-            margin: 10px 0;
-            background: white;
-            border-radius: 8px;
-            border-left: 5px solid #ccc;
-        }
-
-        .leaderboard-item.winner {
-            border-left-color: #ffd700;
-            background: #fff8dc;
-        }
-
-        .leaderboard-item.second {
-            border-left-color: #c0c0c0;
-        }
-
-        .leaderboard-item.third {
-            border-left-color: #cd7f32;
-        }
-
-        .star-rating {
-            display: flex;
-            gap: 2px;
-        }
-
-        .star {
-            color: #ffd700;
-            font-size: 1.2rem;
-        }
-
-        .star.empty {
-            color: #ddd;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        .visible {
-            display: block !important;
-        }
-
-        .error-message {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 12px;
-            border-radius: 8px;
-            margin: 10px 0;
-            border: 1px solid #f5c6cb;
-            text-align: center;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #666;
-        }
-
-        /* Cursor and Animation Styles */
-        .cursor {
-            position: fixed;
-            width: 20px;
-            height: 20px;
-            pointer-events: none;
-            z-index: 10000;
-            transition: all 0.15s ease-out;
-        }
-
-        .cursor.player {
-            background: #667eea;
-            border: 2px solid white;
-            border-radius: 50%;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        }
-
-        .cursor.bot {
-            background: #ff6b6b;
-            border: 2px solid white;
-            border-radius: 50%;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            animation: botPulse 2s ease-in-out infinite;
-        }
-
-        @keyframes botPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-
-        .cursor-label {
-            position: absolute;
-            top: -35px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.85);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            white-space: nowrap;
-            pointer-events: none;
-            font-weight: 500;
-        }
-
-        .cursor-action {
-            position: absolute;
-            top: -55px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #4CAF50;
-            color: white;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 0.7rem;
-            white-space: nowrap;
-            animation: cursorAction 3s ease-out forwards;
-            font-weight: bold;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        }
-
-        .cursor-action.steal {
-            background: #ff9800;
-        }
-
-        @keyframes cursorAction {
-            0% { 
-                opacity: 1; 
-                transform: translateX(-50%) translateY(0) scale(1); 
-            }
-            20% { 
-                transform: translateX(-50%) translateY(-5px) scale(1.05); 
-            }
-            100% { 
-                opacity: 0; 
-                transform: translateX(-50%) translateY(-25px) scale(0.9); 
-            }
-        }
-
-        .drag-trail {
-            position: fixed;
-            width: 4px;
-            height: 4px;
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 9999;
-            animation: trailFade 0.6s ease-out forwards;
-        }
-
-        @keyframes trailFade {
-            0% { 
-                opacity: 0.9; 
-                transform: scale(1); 
-                box-shadow: 0 0 10px rgba(102, 126, 234, 0.6);
-            }
-            100% { 
-                opacity: 0; 
-                transform: scale(0.2); 
-                box-shadow: 0 0 0 rgba(102, 126, 234, 0);
-            }
-        }
-
-        .feature-tile.being-taken {
-            animation: featureTake 0.5s ease-out;
-        }
-
-        @keyframes featureTake {
-            0% { transform: scale(1) rotate(0deg); }
-            50% { transform: scale(1.1) rotate(5deg); }
-            100% { transform: scale(1) rotate(0deg); }
-        }
-
-        .board-slot.feature-added {
-            animation: featureAdd 0.5s ease-out;
-        }
-
-        @keyframes featureAdd {
-            0% { transform: scale(1); background: #f0f4ff; }
-            50% { transform: scale(1.05); background: #e8f5e8; }
-            100% { transform: scale(1); background: #f8fff8; }
-        }
-
-        @media (max-width: 768px) {
-            .building-area {
-                grid-template-columns: 1fr;
-            }
-            
-            .product-options {
-                grid-template-columns: 1fr;
-            }
-            
-            .cursor {
-                width: 16px;
-                height: 16px;
-            }
-            
-            .cursor-label {
-                font-size: 0.7rem;
-                top: -30px;
-            }
-
-            .results-content {
-                padding: 30px 20px;
-                width: 95%;
-            }
-
-            .results-title {
-                font-size: 2rem;
-            }
-
-            .total-star {
-                font-size: 2.5rem;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div id="connectionStatus" class="connection-status connected">🟢 Connected</div>
-    
-    <!-- Results Overlay -->
-    <div id="resultsOverlay" class="results-overlay">
-        <div class="results-content">
-            <h1 class="results-title">🎉 Your Results!</h1>
-            
-            <div class="feature-results">
-                <h3 style="margin-bottom: 20px;">Feature Scores</h3>
-                <div id="featureResultsList">
-                    <!-- Feature results will be populated here -->
-                </div>
-            </div>
-            
-            <div id="totalScoreSection" class="total-score-section">
-                <h3 class="total-score-title">Your Overall Rating</h3>
-                <div id="totalStars" class="total-stars">
-                    <span class="total-star">★</span>
-                    <span class="total-star">★</span>
-                    <span class="total-star">★</span>
-                    <span class="total-star">★</span>
-                    <span class="total-star">★</span>
-                </div>
-                <div id="positionBadge" class="position-badge">
-                    🏆 1st Place!
-                </div>
-            </div>
-            
-            <button id="continueToLeaderboard" class="continue-button">
-                Continue to Leaderboard
-            </button>
-        </div>
-    </div>
-    
-    <div id="root">
-        <div class="container">
-            <div class="game-header">
-                <h1 class="game-title">🏗️ Product Builder</h1>
-                <p class="game-subtitle">Market Research Through Competitive Building</p>
-            </div>
-            
-            <!-- Entry Form (Default View) -->
-            <div id="entryView" class="entry-form">
-                <h2 style="text-align: center; margin-bottom: 20px;">Welcome!</h2>
-                
-                <div id="urlInfo" style="display: none; background: rgba(255, 255, 255, 0.2); color: white; padding: 10px; border-radius: 8px; margin-bottom: 15px; text-align: center; font-size: 0.9em;"></div>
-                
-                <input type="text" id="playerNameInput" class="form-input" placeholder="Enter your name" autocomplete="off">
-                
-                <button id="joinGameBtn" class="form-button">Join Game</button>
-                
-                <div id="errorMessage" class="error-message" style="display: none;"></div>
-                
-                <div style="margin-top: 15px; text-align: center; color: #666; font-size: 0.9em;">
-                    Enter your name to join the next available game
-                </div>
-            </div>
-
-            <!-- Lobby View -->
-            <div id="lobbyView" class="lobby-screen hidden">
-                <h2 style="font-size: 2em; margin-bottom: 15px;">🎮 Game Lobby</h2>
-                <p id="lobbyStatus" style="font-size: 1.2em; color: #666;">
-                    🕐 Waiting for game to start...
-                </p>
-                <div id="lobbyProgress" class="progress-bar-container" style="margin-top: 20px;">
-                    <div class="progress-bar" style="width: 0%;"></div>
-                </div>
-                
-                <div class="players-list">
-                    <h3 style="margin-bottom: 20px;">Players in Lobby</h3>
-                    <div id="playersContainer" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
-                        <!-- Players will be populated here -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Conjoint Stage -->
-            <div id="conjointView" class="game-stage">
-                <div class="stage-header">
-                    <h2 class="stage-title">Stage 1: Product Preference</h2>
-                    <p class="stage-description">Choose which product you would be most likely to buy</p>
-                    <div id="conjointTimer" class="timer">Time remaining: 10s</div>
-                </div>
-
-                <div id="productOptions" class="product-options">
-                    <!-- Product options will be populated here -->
-                </div>
-
-                <div style="text-align: center; margin-top: 30px;">
-                    <button id="submitChoiceBtn" class="form-button" style="max-width: 300px;" disabled>Submit Choice</button>
-                </div>
-            </div>
-
-            <!-- Building Stage -->
-            
+</html>
